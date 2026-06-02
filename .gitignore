@@ -15,9 +15,5 @@
 !hooks/
 !hooks/**
 
-# Per-project memories — skip worktrees (paths containing --claude-worktrees-)
-!projects/
-!projects/*/
-projects/*--claude-worktrees-*/
-!projects/*/memory/
-!projects/*/memory/**
+# projects/ is intentionally excluded — memory dirs are locked by the running
+# Claude Code process and cannot be reliably tracked via git.
