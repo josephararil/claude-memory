@@ -1,0 +1,60 @@
+{
+  "permissions": {
+    "defaultMode": "auto"
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "powershell.exe -NonInteractive -File \"C:\\Users\\jharari\\.claude\\hooks\\block-main-commits.ps1\""
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "powershell.exe -NonInteractive -File \"C:\\Users\\jharari\\.claude\\hooks\\auto-sync.ps1\""
+          }
+        ]
+      },
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "powershell.exe -NonInteractive -File \"C:\\Users\\jharari\\.claude\\hooks\\syntax-check.ps1\""
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "powershell.exe -NonInteractive -File \"C:\\Users\\jharari\\.claude\\hooks\\claude-md-reminder.ps1\""
+          }
+        ]
+      }
+    ]
+  },
+  "extraKnownMarketplaces": {
+    "karpathy-skills": {
+      "source": {
+        "source": "github",
+        "repo": "forrestchang/andrej-karpathy-skills"
+      }
+    }
+  },
+  "theme": "dark",
+  "skipAutoPermissionPrompt": true,
+  "enabledPlugins": {
+    "andrej-karpathy-skills@karpathy-skills": true
+  }
+}

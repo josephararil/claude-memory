@@ -1,0 +1,22 @@
+# Allow-list: ignore everything by default, explicitly allow what matters.
+*
+!.gitignore
+
+# Root-level files
+!CLAUDE.md
+!settings.json
+
+# Custom skills / slash commands
+!commands/
+!commands/**
+
+# Hook scripts
+!hooks/
+!hooks/**
+
+# Per-project memories — skip worktrees (paths containing --claude-worktrees-)
+!projects/
+!projects/*/
+projects/*--claude-worktrees-*/
+!projects/*/memory/
+!projects/*/memory/**
