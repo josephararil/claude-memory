@@ -1,6 +1,7 @@
 # Allow-list: ignore everything by default, explicitly allow what matters.
 *
 !.gitignore
+!.gitattributes
 
 # Root-level files
 !CLAUDE.md
