@@ -50,18 +50,11 @@
         "source": "github",
         "repo": "forrestchang/andrej-karpathy-skills"
       }
-    },
-    "aperture": {
-      "source": {
-        "source": "github",
-        "repo": "josephararil/aperture"
-      }
     }
   },
   "theme": "dark",
   "skipAutoPermissionPrompt": true,
   "enabledPlugins": {
-    "andrej-karpathy-skills@karpathy-skills": true,
-    "aperture@aperture": true
+    "andrej-karpathy-skills@karpathy-skills": true
   }
 }
