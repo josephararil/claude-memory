@@ -1,0 +1,195 @@
+---
+name: plan
+description: Plan a feature with the user and write an orchestration-ready implementation plan to ~/.claude/plans for /build to execute. No code changes.
+argument-hint: [feature or task description]
+allowed-tools: [Read, Glob, Grep, Write, AskUserQuestion, Bash]
+---
+
+# plan
+
+Produce an implementation plan. Do NOT edit or create any file **other than the plan file**, and do
+NOT run state-changing commands against the repo. Implementation happens later, in `/build`.
+
+## Who reads this plan
+
+**Not a human implementer. An orchestrator.** `/build` reads the plan, freezes its contract, and
+farms the mechanical work to Sonnet subagents that each start from an empty context and see **only
+their own brief** — no planning conversation, no sibling tasks, no sight of each other's edits.
+
+Two consequences shape everything below:
+
+1. **A subagent cannot derive.** Every value, string, signature and expected number it needs must be
+   written down. A subagent inventing a number is the main way builds go wrong, and it happens
+   precisely where the plan left a gap.
+2. **Bugs collect in the seams.** What breaks is never inside one file — it's the contract *between*
+   files, where no subagent can see both sides. Your job is to specify those contracts so they can't
+   be independently guessed two different ways.
+
+A plan that reads beautifully but leaves a prop shape, a unit, or a registry owner unstated will
+produce a build that compiles and is wrong.
+
+---
+
+## Instructions
+
+### 1. Restate scope, and get confirmation
+
+List in bullets every distinct change you understand to be in scope. Where design decisions are open
+(defaults, UX direction, scope tradeoffs), use `AskUserQuestion` with concrete options — it surfaces
+tradeoffs faster than open chat. **Wait for explicit confirmation.** If the user said "go" in the same
+message that invoked this skill, still confirm scope first.
+
+### 2. Investigate before you specify
+
+Read the actual code for every site you intend to change. You cannot pre-compute values or name a
+contract you haven't read. Specifically, find and note:
+
+- every call site of anything you plan to rename, change, or delete — in **both** directions
+  (references to it, and things it references);
+- the real signature and prop shape of any component or function crossing a file boundary;
+- any shared registry (copy/tooltip ids, enums, event names) your change touches;
+- whether generated/build artifacts sit in the paths you're editing.
+
+### 3. Check your own arithmetic
+
+If the plan asserts numbers — expected test values, derived figures, worked examples — **verify them**
+before writing them down. You may use `Bash` for a throwaway Node/Python probe **in the scratchpad or
+system temp only**; never write to the repo and never run its build or tests. A wrong expected value
+costs a subagent a full session and an orchestrator an adjudication.
+
+State every expected number **with the inputs that produce it**. `balance −453.97 at €6.58/day →
+2026-08-16` is unverifiable and will be wrong; `from 2026-06-07, balance −453.97, €6.5753/day → 70
+days → 2026-08-16` can be checked. Where a change will move numbers you haven't enumerated, **say
+so** rather than implying the list is exhaustive.
+
+### 4. Write the plan
+
+To `~/.claude/plans/<short-slug>.md`, using the template in the appendix. Every section there exists
+because its absence broke a real build. Then do step 5 before you hand it over.
+
+### 5. Run a consistency pass — the plan is a spec, and specs contradict themselves
+
+Re-read what you wrote, hunting for two sections that disagree. The specific failure to look for:
+**a "delete these" list versus a content table that still uses one of them.** Two different subagents
+will implement both halves, and the result is a dangling reference no test catches. Check in
+particular:
+
+- deletion lists vs. copy/content tables, fixture tables, and example output;
+- a renamed field vs. every place the old name still appears in your own prose;
+- a task's file set vs. the edit sites you described for it;
+- the completion checklist vs. the task table — every actionable item in exactly one task.
+
+### 6. Stop
+
+End with: "Plan written to `<path>`. It specifies **N tasks** (**M** parallelisable), roughly
+**<estimate>** of subagent work. Run **/build** when you want me to implement it."
+
+---
+
+## Rules
+
+- No file edits except the plan file in `~/.claude/plans/`. No state-changing commands against the
+  repo. `Bash` is for read-only inspection and scratchpad arithmetic probes only.
+- Do not begin implementation; that is `/build`'s job.
+- **Pre-compute everything.** Exact strings verbatim, exact numbers with their inputs, exact
+  signatures. If you find yourself writing "the implementer should determine", stop and determine it.
+- **Specify every cross-file contract.** If two tasks touch the same interface, its shape belongs in
+  the Contract section, not in prose inside one task.
+- **Every actionable item goes in the task table.** Items that live only in a "Flags", "Risks" or
+  "Cleanups" appendix get silently dropped, because no task owns them.
+- **Identify edit sites by symbol plus a unique anchor string**, with line numbers as a hint only.
+  Line numbers go stale the moment an earlier task edits the same file.
+- Don't write full pasteable subagent prompts. `/build` assembles briefs from the Contract plus each
+  task's detail block; duplicating them here doubles the text and drifts out of sync. Make each task's
+  detail block complete enough to be wrapped, not prose that needs interpreting.
+- If the feature needs *parallel research* to understand before you can specify it, this skill is too
+  thin — say so and offer Claude Code's plan mode for the investigation, then come back here.
+
+---
+
+## Appendix — plan template
+
+````markdown
+# <Feature name>
+
+> **Handoff note.** Executed by `/build`: an Opus orchestrator delegating to Sonnet subagents.
+> **§Tasks is the work contract** — read it before starting. Every value, string and expected number
+> here is pre-computed so subagents implement rather than derive. Tasks marked **[ORCHESTRATOR]** must
+> not be delegated.
+
+## Context
+Why this change, what prompted it, the intended outcome. Name the design principle that should settle
+micro-decisions a subagent hits and the plan didn't anticipate — that one sentence is worth more than
+another page of instruction.
+
+## Locked decisions
+| Question | Decision | Why |
+|---|---|---|
+Decisions already settled with the user. Prevents mid-build re-litigation.
+
+## Contract  ← /build lifts this verbatim into every subagent brief
+The single most load-bearing section. Anything two tasks could guess differently:
+
+- **Stored/data shapes** — field names with **units**, and the exact divisor or constant where one
+  exists. Unit ambiguity is how two files end up disagreeing by 12×.
+- **Function signatures** — every new or changed export, with argument order and return shape.
+- **Component contracts** — the full prop list for anything a sibling task binds to, including which
+  props may arrive undefined mid-build, and the render condition for each conditional slot. *Spell the
+  condition out:* "renders at any sign" is a requirement; an example showing a zero value is not.
+- **Shared registries** — for each id/key: who **adds** it and who **references** it. A referencing
+  task that runs before the adding task, or references one being deleted, produces a dead link.
+- **Generated artifacts** — which paths are build output, whether subagents rebuild, and whether they
+  commit or discard. Decide once here so no subagent improvises.
+- **Invariants, as named prohibitions with reasons.** Name them (`Invariant <X>`), say what must never
+  be done, say *why the wrong thing will look correct*, and say how it is enforced — a test row, a
+  comment at the definition, a doc line. An invariant with no enforcement is a wish.
+
+## Tasks
+| # | Task | Owner | Files (exact) | Depends on | Additive-only? |
+|---|---|---|---|---|---|
+| 1 | … | Orchestrator / Sonnet | `y/calc.jsx` | — | — |
+
+- **Files** must be exact and complete — `/build` schedules concurrency by **file exclusivity**, so a
+  missing path causes two agents to collide and a spurious one serialises work needlessly.
+- **Owner**: keep for the orchestrator anything where a wrong guess is expensive and invisible —
+  core algorithms, data migrations, invariant enforcement, anything whose failure mode is a plausible
+  wrong number. Give Sonnet everything mechanical, which is most of it.
+- **Additive-only** means the tree still compiles mid-task; flag it so ordering is safe.
+- Name the **contended files** explicitly: "`y/ui.jsx` has three tasks — serialise them."
+
+### Task N — <title>
+For each task, a block `/build` can wrap into a brief:
+- **Files**, and files it must NOT touch (name the sibling tasks that own them).
+- **Edit sites** by symbol + unique anchor string (line numbers as a hint only).
+- **What to do**, with every string verbatim and every number pre-computed.
+- **What not to change** — the protected invariants, by name.
+- **Verification command** and commit scope.
+
+## Verification
+Per check: what to assert, **how to reach that state**, and who can run it.
+
+Reaching the state is the part plans omit. If a check needs a negative balance, an error path or an
+empty list that the seed data never produces, say how to synthesise it (patch storage, seed a
+fixture, temporary transaction) and to restore afterwards. Otherwise it silently becomes a
+"please check by hand" that could have been verified.
+
+Mark each: **machine-checkable** (tests, build, lint, DOM assertions) or **needs a human**
+(production-only paths, external services, real devices, genuine aesthetic judgement). Be strict —
+most "needs a human" checks are machine-checkable once state can be synthesised.
+
+Give exact expected values with their inputs, and include the project's own mandated gates.
+
+## Out of scope
+What is deliberately not being done, **and why** — so `/build` doesn't helpfully fold it in. Flag
+anything real found along the way that should become its own piece of work.
+
+## Cost
+N tasks, M parallelisable, rough token estimate. If it implies more than about six subagents, say so
+plainly so the user can scale it down before spending.
+
+## Completion checklist
+- [ ] Every actionable item, flat, cross-referenced to its task (`→ Task 3`).
+
+Includes items whose only home is a Flags or Cleanups section — those are exactly the ones that get
+dropped. `/build` ticks this off before opening the PR.
+````

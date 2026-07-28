@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Presentation Deck</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Roboto+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --bg:#08090b; --bg-2:#0e1012; --surface:#151719;
+    --line:#2b313a; --line-2:#3c434f;
+    --ink:#e8eaed; --muted:#9ca3af; --faint:#6b7280;
+    --accent:#00d4a1; --accent-2:#00f0b5; --accent-dim:#009a75;
+    --blue:#2962ff; --danger:#ff4757;
+    --font-display:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+    --font-body:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+    --font-mono:'Roboto Mono',ui-monospace,'SF Mono',Menlo,monospace;
+    --maxw:1180px; --pad:clamp(2rem,4.5vw,5rem); --ease:cubic-bezier(.22,.61,.36,1);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{background:var(--bg);color:var(--ink);font-family:var(--font-body);overflow:hidden;-webkit-font-smoothing:antialiased}
+
+  .bg-fx{position:fixed;inset:0;z-index:0;pointer-events:none}
+  .bg-grid{position:absolute;inset:0;background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px);background-size:64px 64px;opacity:.18;mask-image:radial-gradient(ellipse 90% 80% at 70% 20%,#000 25%,transparent 80%)}
+  .bg-glow{position:absolute;width:70vw;height:70vw;top:-25vw;right:-15vw;border-radius:50%;background:radial-gradient(circle,rgba(0,212,161,.12),transparent 62%);filter:blur(20px)}
+  .bg-glow.two{top:auto;bottom:-30vw;left:-20vw;right:auto;width:55vw;height:55vw;background:radial-gradient(circle,rgba(41,98,255,.07),transparent 62%)}
+  .bg-grain{position:absolute;inset:0;opacity:.045;mix-blend-mode:overlay;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+
+  .deck{position:relative;z-index:1;height:100vh;width:100vw}
+  .slide{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:center;padding:var(--pad);max-width:var(--maxw);margin:0 auto;opacity:0;visibility:hidden;transform:translateY(14px);transition:opacity .35s var(--ease),transform .4s var(--ease),visibility 0s linear .35s}
+  .slide.active{opacity:1;visibility:visible;transform:none;transition-delay:0s}
+  .slide.active [data-r]{animation:rise .45s var(--ease) both}
+  .slide.active [data-r="1"]{animation-delay:.04s}
+  .slide.active [data-r="2"]{animation-delay:.09s}
+  .slide.active [data-r="3"]{animation-delay:.15s}
+  .slide.active [data-r="4"]{animation-delay:.22s}
+  .slide.active [data-r="5"]{animation-delay:.30s}
+  .slide.active [data-r="6"]{animation-delay:.38s}
+  @keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+
+  .kicker{font-family:var(--font-mono);font-size:.72rem;font-weight:500;letter-spacing:.32em;text-transform:uppercase;color:var(--accent);display:flex;align-items:center;gap:.9rem;margin-bottom:1.6rem}
+  .kicker::before{content:"";width:34px;height:1px;background:var(--accent);opacity:.7}
+  h1{font-family:var(--font-display);font-weight:800;font-optical-sizing:auto;font-size:clamp(2.1rem,4.6vw,3.8rem);line-height:1.05;letter-spacing:-.032em;max-width:20ch;margin-bottom:1.3rem}
+  h1 em{font-style:normal;color:var(--accent)}
+  h1 .lime{color:var(--accent-2)}
+  .lede{font-size:clamp(1rem,1.5vw,1.3rem);line-height:1.55;color:var(--muted);max-width:60ch;font-weight:400}
+  .lede strong{color:var(--ink);font-weight:600}
+  .punch{margin-top:auto;padding-top:1.5rem;padding-left:1.1rem;font-weight:500;font-size:clamp(1rem,1.45vw,1.32rem);line-height:1.42;color:var(--ink);border-top:1px solid var(--line);max-width:66ch;position:relative}
+  .punch::before{content:"";position:absolute;left:0;top:1.5rem;bottom:.1rem;width:2px;background:var(--accent)}
+  .punch strong{color:var(--accent-2);font-weight:700}
+  .note{font-family:var(--font-mono);font-size:.64rem;color:var(--faint);letter-spacing:.05em;margin-top:1.1rem}
+
+  .pills{display:flex;gap:.9rem;margin-top:2rem;flex-wrap:wrap}
+  .pill{display:flex;align-items:baseline;gap:.7rem;border:1px solid var(--line);border-radius:100px;padding:.6rem 1.2rem;background:rgba(255,255,255,.035)}
+  .pill b{font-family:var(--font-mono);color:var(--accent);font-size:.78rem;font-weight:700}
+  .pill span{font-weight:600;font-size:.9rem}
+
+  .stats{display:flex;gap:0;margin-top:2.2rem;border:1px solid var(--line);border-radius:14px;overflow:hidden;max-width:900px}
+  .stats .s{flex:1;padding:1.4rem 1.5rem;border-left:1px solid var(--line)}
+  .stats .s:first-child{border-left:0}
+  .stats .s .n{font-family:var(--font-display);font-weight:800;letter-spacing:-.02em;font-size:clamp(1.5rem,2.6vw,2.3rem);color:var(--accent);line-height:1}
+  .stats .s .n.lime{color:var(--accent-2)}
+  .stats .s .c{font-size:.8rem;color:var(--muted);margin-top:.55rem;line-height:1.4}
+
+  .seq{display:flex;align-items:center;gap:.5rem;margin-top:2rem;flex-wrap:wrap;font-family:var(--font-mono);font-size:.84rem}
+  .seq .st{border:1px solid var(--line);border-radius:8px;padding:.55rem .9rem;color:var(--ink);background:rgba(255,255,255,.04);display:flex;flex-direction:column;gap:.2rem;min-width:0}
+  .seq .st b{color:var(--accent);font-weight:700;font-size:.7rem}
+  .seq .st small{color:var(--faint);font-size:.66rem}
+  .seq .ar{color:var(--faint)}
+
+  .status{display:flex;flex-wrap:wrap;gap:.7rem;margin-top:1.7rem;max-width:940px}
+  .status .chip{display:flex;align-items:center;gap:.6rem;border:1px solid var(--line);border-radius:8px;padding:.55rem 1rem;font-size:.86rem;color:var(--ink);background:rgba(255,255,255,.035)}
+  .status .chip i{width:8px;height:8px;border-radius:50%;flex:none}
+  .status .chip.done{color:var(--ink)} .status .chip.done i{background:var(--accent);box-shadow:0 0 9px var(--accent-dim)}
+  .status .chip.alt i{background:var(--blue);box-shadow:0 0 9px rgba(41,98,255,.5)}
+
+  .cards{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-top:2rem;max-width:1040px}
+  .cards.two{grid-template-columns:1fr 1fr;max-width:920px}
+  .card{border:1px solid var(--line);border-radius:14px;padding:1.3rem 1.4rem;background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.012));position:relative}
+  .card.hl{border-color:var(--accent-dim);box-shadow:0 0 50px -28px var(--accent)}
+  .card .lbl{font-family:var(--font-mono);font-size:.62rem;letter-spacing:.18em;text-transform:uppercase;color:var(--accent);margin-bottom:.7rem;display:block}
+  .card h3{font-size:1.02rem;font-weight:700;margin-bottom:.55rem;letter-spacing:-.01em}
+  .card p{font-size:.85rem;color:var(--muted);line-height:1.5}
+  .card ul{list-style:none;display:flex;flex-direction:column;gap:.38rem}
+  .card ul li{font-size:.82rem;color:var(--muted);display:flex;gap:.5rem;line-height:1.35}
+  .card ul li::before{content:"▸";color:var(--accent);font-size:.66rem;line-height:1.55}
+  .card ul li b{color:var(--ink);font-weight:600}
+
+  .colpair{display:grid;grid-template-columns:1fr auto 1fr;gap:1.3rem;align-items:stretch;margin-top:2rem;max-width:1000px}
+  .colpair .col{border:1px solid var(--line-2);border-radius:14px;padding:1.5rem;background:linear-gradient(180deg,rgba(0,212,161,.05),transparent);display:flex;flex-direction:column}
+  .colpair .col .mtag{font-family:var(--font-mono);font-size:.64rem;letter-spacing:.18em;text-transform:uppercase;color:var(--accent);margin-bottom:.6rem}
+  .colpair .col h3{font-size:1.25rem;font-weight:700;letter-spacing:-.01em;margin-bottom:.5rem}
+  .colpair .col .d{color:var(--muted);font-size:.86rem;line-height:1.5;margin-bottom:1rem}
+  .colpair .col ul{list-style:none;display:flex;flex-direction:column;gap:.45rem;margin-top:auto}
+  .colpair .col ul li{font-size:.82rem;color:var(--ink);display:flex;gap:.5rem}
+  .colpair .col ul li::before{content:"—";color:var(--faint)}
+  .colpair .mid{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.7rem}
+  .colpair .router{writing-mode:vertical-rl;font-family:var(--font-mono);font-size:.64rem;letter-spacing:.26em;text-transform:uppercase;color:var(--muted);border:1px solid var(--line-2);border-radius:30px;padding:1.2rem .5rem;background:var(--surface)}
+  .colpair .pulse{width:9px;height:9px;border-radius:50%;background:var(--accent);animation:pulse 2.1s infinite}
+
+  .aflow{display:flex;flex-direction:column;gap:.4rem;margin-top:1.8rem;max-width:940px}
+  .aflow .node{display:flex;align-items:center;gap:1rem;border:1px solid var(--line);border-radius:10px;padding:.6rem 1.05rem;background:rgba(255,255,255,.04)}
+  .aflow .node .tg{font-family:var(--font-mono);font-size:.6rem;letter-spacing:.1em;color:var(--accent);border:1px solid var(--accent-dim);border-radius:5px;padding:.16rem .42rem;flex:none}
+  .aflow .node .tg.rd{color:var(--danger);border-color:var(--danger)}
+  .aflow .node .nm{font-weight:700;font-size:.9rem}
+  .aflow .node .ds{margin-left:auto;color:var(--muted);font-size:.76rem;font-family:var(--font-mono);text-align:right}
+  .aflow .pair{display:flex;gap:.5rem} .aflow .pair .node{flex:1}
+  .aflow .ar{text-align:center;color:var(--faint);font-family:var(--font-mono);font-size:.72rem;line-height:1}
+
+  .capgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:.85rem;margin-top:2rem;max-width:1060px}
+  .cap{border:1px solid var(--line);border-radius:12px;padding:1rem 1.05rem;background:rgba(255,255,255,.035)}
+  .cap h4{font-size:.9rem;font-weight:700;margin-bottom:.5rem;display:flex;align-items:center;gap:.5rem}
+  .cap h4::before{content:"";width:7px;height:7px;border-radius:2px;background:var(--accent);flex:none}
+  .cap.alt h4::before{background:var(--blue)}
+  .cap ul{list-style:none;display:flex;flex-direction:column;gap:.26rem}
+  .cap ul li{font-size:.72rem;color:var(--muted);line-height:1.3}
+
+  .prin{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-top:2rem;max-width:1040px}
+  .prin .p{border:1px solid var(--line);border-radius:12px;padding:1.1rem 1.2rem;background:linear-gradient(180deg,rgba(255,255,255,.045),rgba(255,255,255,.01))}
+  .prin .p .pn{font-family:var(--font-mono);font-size:.62rem;letter-spacing:.16em;color:var(--accent);margin-bottom:.5rem;display:block}
+  .prin .p h4{font-size:.95rem;font-weight:700;margin-bottom:.32rem}
+  .prin .p p{font-size:.78rem;color:var(--muted);line-height:1.42}
+  .prin .p.key{grid-column:1/-1;border-color:var(--accent-dim);background:linear-gradient(120deg,rgba(0,212,161,.09),transparent);box-shadow:0 0 60px -32px var(--accent);display:flex;align-items:center;gap:1.4rem;margin-top:.2rem}
+  .prin .p.key .pn{margin-bottom:0;flex:none}
+  .prin .p.key .kt h4{margin-bottom:.25rem}
+  .prin .p.key .kt p{font-size:.84rem}
+
+  /* from→to */
+  .fromto{display:grid;grid-template-columns:1fr auto 1fr;gap:1.3rem;align-items:center;margin-top:2rem;max-width:960px}
+  .fromto .b{border:1px solid var(--line);border-radius:14px;padding:1.5rem 1.6rem}
+  .fromto .b .t{font-family:var(--font-mono);font-size:.64rem;letter-spacing:.2em;text-transform:uppercase;color:var(--faint);margin-bottom:.7rem}
+  .fromto .b.now{background:linear-gradient(180deg,rgba(255,71,87,.05),transparent)}
+  .fromto .b.next{background:linear-gradient(180deg,rgba(0,212,161,.07),transparent);border-color:var(--accent-dim);box-shadow:0 0 50px -30px var(--accent)}
+  .fromto .b h3{font-size:1.15rem;font-weight:700;margin-bottom:.5rem}
+  .fromto .b p{font-size:.85rem;color:var(--muted);line-height:1.5}
+  .fromto .arr{font-family:var(--font-mono);color:var(--accent-2);font-size:1.6rem}
+
+  /* compare (Adaptive vs Omnius) */
+  .compare{display:grid;grid-template-columns:1fr 1fr;gap:1.2rem;margin-top:1.9rem;max-width:980px}
+  .compare .side{border:1px solid var(--line);border-radius:14px;padding:1.5rem 1.6rem;display:flex;flex-direction:column;gap:.7rem}
+  .compare .side.them{background:linear-gradient(180deg,rgba(255,71,87,.06),transparent);border-color:#3a2526}
+  .compare .side.us{background:linear-gradient(180deg,rgba(0,212,161,.08),transparent);border-color:var(--accent-dim);box-shadow:0 0 55px -28px var(--accent)}
+  .compare .side .who{font-family:var(--font-mono);font-size:.66rem;letter-spacing:.18em;text-transform:uppercase}
+  .compare .side.them .who{color:var(--danger)} .compare .side.us .who{color:var(--accent)}
+  .compare .side .big{font-family:var(--font-display);font-weight:800;font-size:clamp(1.6rem,3.2vw,2.6rem);letter-spacing:-.025em;line-height:1.05}
+  .compare .side.them .big{color:var(--muted)} .compare .side.us .big{color:var(--accent-2)}
+  .compare .side .row{display:flex;justify-content:space-between;gap:1rem;font-size:.82rem;color:var(--muted);border-top:1px solid var(--line);padding-top:.55rem}
+  .compare .side .row b{color:var(--ink);font-weight:600;text-align:right}
+
+  /* architecture tier diagram */
+  .arch{display:flex;flex-direction:column;gap:.42rem;margin-top:1.5rem;max-width:1080px}
+  .arch .tier{border:1px solid #3c434f;border-radius:11px;padding:.7rem .9rem;background:rgba(255,255,255,.05);display:flex;align-items:center;gap:.9rem}
+  .arch .tier .tlbl{font-family:var(--font-mono);font-size:.58rem;letter-spacing:.12em;text-transform:uppercase;color:#aeb4be;flex:0 0 92px}
+  .arch .tier .boxes{display:flex;gap:.5rem;flex:1;flex-wrap:wrap}
+  .arch .box2{flex:1 1 0;min-width:84px;border:1px solid #49515d;border-radius:7px;padding:.45rem .55rem;background:#23282f;text-align:center}
+  .arch .box2 b{display:block;font-size:.78rem;font-weight:600;line-height:1.15;color:var(--ink)}
+  .arch .box2 small{font-size:.6rem;color:#b2b8c2;font-family:var(--font-mono);letter-spacing:.02em}
+  .arch .tier.core{border-color:var(--accent);background:linear-gradient(180deg,rgba(0,212,161,.14),rgba(0,212,161,.04))}
+  .arch .tier.core .tlbl{color:var(--accent-2)}
+  .arch .tier.core .box2{border-color:var(--accent-dim);background:rgba(0,212,161,.1)}
+  .arch .down{text-align:center;color:#aeb4be;font-size:.74rem;line-height:.5;font-family:var(--font-mono)}
+  .archimg{display:block;width:100%;max-width:1060px;max-height:66vh;object-fit:contain;margin:.6rem auto 0;border:1px solid var(--line);border-radius:12px}
+
+  .slide.divider{justify-content:center}
+  .divider .dnum{font-family:var(--font-display);font-weight:800;font-size:clamp(4rem,12vw,9rem);line-height:.85;letter-spacing:-.05em;color:var(--accent);margin-bottom:.4rem}
+  .divider h1{font-size:clamp(2.4rem,5.5vw,4.6rem);max-width:none}
+  .divider .sub{font-family:var(--font-mono);font-size:.82rem;color:#8ab0ff;letter-spacing:.18em;text-transform:uppercase;margin-top:1.3rem}
+
+  .slide.cover{justify-content:center;align-items:flex-start}
+  .cover-meta{font-family:var(--font-mono);font-size:.8rem;letter-spacing:.3em;text-transform:uppercase;color:var(--accent);margin-bottom:1.6rem}
+  .cover-title{font-family:var(--font-display);font-weight:800;font-size:clamp(3.4rem,12vw,9rem);line-height:.94;letter-spacing:-.05em;margin:0 0 1.4rem;max-width:none}
+  .cover-title .eng{color:var(--accent)}
+  .cover-tag{font-size:clamp(1.15rem,2vw,1.7rem);color:var(--muted);max-width:36ch;line-height:1.38}
+  .cover-tag em{font-style:normal;color:var(--ink);font-weight:600}
+  .cover-foot{position:absolute;left:var(--pad);right:var(--pad);bottom:2.2rem;display:flex;justify-content:space-between;align-items:center;gap:1rem;flex-wrap:wrap;font-family:var(--font-mono);font-size:.76rem;color:var(--faint);border-top:1px solid var(--line);padding-top:1.1rem}
+  .cover-foot .live{display:flex;align-items:center;gap:.65rem;color:var(--muted)}
+  .cover-foot .live i{width:9px;height:9px;border-radius:50%;background:var(--accent);animation:pulse 2.1s infinite}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(0,212,161,.55)}70%{box-shadow:0 0 0 11px rgba(0,212,161,0)}100%{box-shadow:0 0 0 0 rgba(0,212,161,0)}}
+
+  .brandmark,.counter{transition:opacity .4s var(--ease)}
+  body.on-cover .brandmark,body.on-cover .counter{opacity:0}
+  .progress{position:fixed;top:0;left:0;height:2px;background:var(--accent);z-index:6;transition:width .5s var(--ease)}
+  .brandmark{position:fixed;top:1.6rem;left:var(--pad);z-index:6;font-family:var(--font-mono);font-size:.7rem;letter-spacing:.26em;text-transform:uppercase;color:var(--faint)}
+  .brandmark b{color:var(--ink);font-weight:700}
+  .counter{position:fixed;top:1.5rem;right:var(--pad);z-index:6;font-family:var(--font-mono);font-size:.76rem;color:var(--muted)}
+  .counter b{color:var(--accent)}
+  .dots{position:fixed;bottom:1.4rem;left:50%;transform:translateX(-50%);z-index:6;display:flex;gap:.5rem;pointer-events:auto;max-width:70vw;flex-wrap:wrap;justify-content:center}
+  .dot{width:6px;height:6px;border-radius:50%;border:1px solid var(--faint);background:transparent;cursor:pointer;padding:0;transition:.3s var(--ease)}
+  .dot.on{background:var(--accent);border-color:var(--accent);transform:scale(1.3)}
+  .hint{position:fixed;bottom:1.4rem;right:var(--pad);z-index:6;font-family:var(--font-mono);font-size:.66rem;color:var(--faint);letter-spacing:.1em}
+
+  @media (max-width:820px){
+    .cards,.cards.two,.capgrid,.prin,.colpair,.fromto,.compare{grid-template-columns:1fr} .stats{flex-direction:column} .stats .s{border-left:0;border-top:1px solid var(--line)} .stats .s:first-child{border-top:0}
+    .arch .tier{flex-direction:column;align-items:stretch} .arch .tier .tlbl{flex:none}
+    .brandmark,.hint{display:none}
+  }
+  @media (prefers-reduced-motion:reduce){*{animation-duration:.001ms!important;transition-duration:.001ms!important}}
+  @media print{
+    body{overflow:visible}.bg-fx{position:absolute}
+    .progress,.brandmark,.counter,.dots,.hint{display:none!important}
+    .deck{height:auto}
+    .slide{position:relative;inset:auto;height:100vh;max-width:none;padding:7vh 7vw;opacity:1!important;visibility:visible!important;transform:none!important;page-break-after:always;break-after:page}
+    .slide [data-r]{animation:none!important}
+    *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
+  }
+</style>
+</head>
+<body>
+  <!-- ========================================================================
+       HOW THIS FILE WORKS  (read me, then delete this comment block)
+       - One <section class="slide" data-i="N"> per slide. data-i is sequential
+         from 0. Slide 0 is the COVER (it auto-hides the brandmark + counter).
+       - The script at the bottom auto-builds the dot nav, the NN/NN counter and
+         the progress bar from however many slides exist. Just keep data-i
+         sequential and leave the <script> alone.
+       - data-r="1".."6" on a slide's children controls the staggered rise-in
+         animation order. Delays are only defined for 1..6 — keep each slide to
+         at most ~6 animated groups.
+       - Each slide below demonstrates ONE component family. Keep the ones you
+         need, duplicate them, and replace the EXAMPLE COPY with real content.
+         The CSS supports every component whether or not a slide here uses it.
+       - The running example ("Northwind", a fictional data platform) is just
+         illustrative — replace all of it.
+       ===================================================================== -->
+
+  <div class="bg-fx"><div class="bg-grid"></div><div class="bg-glow"></div><div class="bg-glow two"></div><div class="bg-grain"></div></div>
+  <div class="progress" id="progress"></div>
+  <div class="brandmark"><b>NORTHWIND</b> &nbsp;·&nbsp; FOR ACME CORP</div>   <!-- top-left wordmark · audience -->
+  <div class="counter"><b id="cur">01</b> / <span id="tot">21</span></div>   <!-- auto-filled by JS -->
+
+  <main class="deck" id="deck">
+
+    <!-- ===== 0 · COVER =====================================================
+         Components: .cover-meta (mono eyebrow) · .cover-title (.eng colors part
+         of the name) · .cover-tag (<em> highlights the key benefit phrase) ·
+         .cover-foot (left = one-line positioning w/ live dot, right = agenda). -->
+    <section class="slide cover active" data-i="0">
+      <div class="cover-meta" data-r="1">Capability Briefing · Prepared for Acme Corp</div>
+      <h1 class="cover-title" data-r="2">North<span class="eng">wind</span></h1>
+      <p class="cover-tag" data-r="3">A modern data platform — <em>fast, unified, and yours to shape</em> — built by a small, AI-enabled team.</p>
+      <div class="cover-foot" data-r="4"><span class="live"><i></i> A platform to own, not a tool to rent</span><span>Why · How · What's inside · Live demo</span></div>
+    </section>
+
+    <!-- ===== 1 · THESIS / "FROM + TO" =====================================
+         Use .fromto for a two-part value statement: "what you keep" + "what we
+         add", or "today" -> "tomorrow". Middle glyph (+ or an arrow). .b.next is
+         the emphasized (accent) box. End most content slides on a .punch — the
+         single "so what" takeaway, with its left accent bar. -->
+    <section class="slide" data-i="1">
+      <div class="kicker" data-r="1">The opportunity</div>
+      <h1 data-r="2">A modern platform — yours to <em>own</em> and shape.</h1>
+      <div class="fromto" data-r="3">
+        <div class="b"><div class="t">What you keep</div><h3>Your apps &amp; your data</h3><p>Your front-end, your brand, and your customer relationships all stay yours.</p></div>
+        <div class="arr">+</div>
+        <div class="b next"><div class="t">What Northwind adds</div><h3>An engine you own</h3><p>A modern, unified platform you own outright — extensible, fast, and open to new lines of business.</p></div>
+      </div>
+      <div class="punch" data-r="4">Northwind is a foundation you'd <strong>own and shape</strong> — built to extend into new markets and new revenue.</div>
+    </section>
+
+    <!-- ===== 2 · CARD GRID (the workhorse) ================================
+         .cards = 3-up grid (.cards.two = 2-up). Each .card has a mono .lbl
+         eyebrow (number it "01 · Topic" for a tour), an h3, and a short p.
+         Add class "hl" to ONE card to spotlight it (accent border + glow).
+         This is the default for "here are the N things" slides. -->
+    <section class="slide" data-i="2">
+      <div class="kicker" data-r="1">What it means for you</div>
+      <h1 data-r="2">Six opportunities it opens up.</h1>
+      <div class="cards" data-r="3">
+        <div class="card"><span class="lbl">01 · Record</span><h3>One source of truth</h3><p>A single authoritative record across every system and data type you run.</p></div>
+        <div class="card"><span class="lbl">02 · Reach</span><h3>Built to extend</h3><p>Add new capabilities on top without rebuilding the core underneath.</p></div>
+        <div class="card hl"><span class="lbl">03 · Velocity</span><h3>Built fast, by AI</h3><p>A scope quoted at ~$25M over 30 months — delivered in under a year, a fraction of the cost.</p></div>
+        <div class="card"><span class="lbl">04 · Bespoke</span><h3>Yours to shape</h3><p>Scaffolded at the ideal point to tailor to your systems and workflows.</p></div>
+        <div class="card"><span class="lbl">05 · New revenue</span><h3>Beyond today's base</h3><p>Performance and open APIs make an entirely new customer segment viable.</p></div>
+        <div class="card"><span class="lbl">06 · Standards-native</span><h3>Plugs in cleanly</h3><p>Built on the standards your ecosystem already speaks — integration is easy.</p></div>
+      </div>
+      <div class="punch" data-r="4">The rest of today walks these through: <strong>why we built it, how, what's inside</strong> — then a live demo.</div>
+    </section>
+
+    <!-- ===== 3 · SECTION DIVIDER ==========================================
+         Use dividers to chapter a long deck (A / B / C ...). .dnum is the big
+         letter/number, h1 the chapter title, .sub a mono subtitle. -->
+    <section class="slide divider" data-i="3">
+      <div class="dnum" data-r="1">A</div><h1 data-r="2">Why we built it — and how</h1>
+      <div class="sub" data-r="3">A small, AI-enabled team</div>
+    </section>
+
+    <!-- ===== 4 · PROCESS / PIPELINE (.aflow) ==============================
+         Vertical flow of steps. .node has a .tg tag (number/label), .nm name,
+         optional .ds description (right-aligned). .tg.rd = red/danger accent.
+         .pair puts two nodes side by side. .ar = an arrow / connector line.
+         Good for workflows, assembly lines, request lifecycles. -->
+    <section class="slide" data-i="4">
+      <div class="kicker" data-r="1">How we built it</div>
+      <h1 data-r="2">An <em>AI-enabled</em> engineering team.</h1>
+      <p class="lede" data-r="3">Independent AI agents check each other's work — so we get startup velocity <strong>without</strong> the bugs that usually come with speed.</p>
+      <div class="aflow" data-r="4">
+        <div class="node"><span class="tg">01</span><span class="nm">Test Writer</span><span class="ds">never sees the code · writes hard-to-fake tests</span></div>
+        <div class="ar">&#8595;</div>
+        <div class="node"><span class="tg">02</span><span class="nm">Implementer</span><span class="ds">forbidden from weakening the tests</span></div>
+        <div class="ar">&#8595; &nbsp; two reviewers in parallel &nbsp; &#8595;</div>
+        <div class="pair"><div class="node"><span class="tg">03</span><span class="nm">Process Reviewer</span></div><div class="node"><span class="tg">04</span><span class="nm">Domain Expert</span></div></div>
+        <div class="ar">&#8595;</div>
+        <div class="node"><span class="tg rd">05</span><span class="nm">Orchestrator</span><span class="ds">ships only when every reviewer is clean</span></div>
+      </div>
+      <div class="punch" data-r="5">No agent signs off on its own work. <strong>Velocity from the AI; safety from the structure.</strong></div>
+    </section>
+
+    <!-- ===== 5 · HEAD-TO-HEAD COMPARE (.compare) =========================
+         Two sides: .them (muted/red, the alternative) vs .us (accent, you).
+         .big is the headline number/claim; .row pairs a label with a bold value.
+         Perfect for cost/time/"vendor vs us" proof. -->
+    <section class="slide" data-i="5">
+      <div class="kicker" data-r="1">The proof, in cost &amp; time</div>
+      <h1 data-r="2">The same scope — a <em>fraction</em> of the cost and time.</h1>
+      <div class="compare" data-r="3">
+        <div class="side them">
+          <div class="who">Traditional build · proposal</div>
+          <div class="big">~$25M</div>
+          <div class="row"><span>Timeline</span><b>~30 months</b></div>
+          <div class="row"><span>Licensing</span><b>+ ongoing fees</b></div>
+          <div class="row"><span>Model</span><b>Large vendor team</b></div>
+        </div>
+        <div class="side us">
+          <div class="who">Northwind · delivered</div>
+          <div class="big">&lt; 1 year</div>
+          <div class="row"><span>Team</span><b>Small, AI-enabled</b></div>
+          <div class="row"><span>Licensing</span><b>None — you own it</b></div>
+          <div class="row"><span>Scope</span><b>Delivered, not proposed</b></div>
+        </div>
+      </div>
+      <div class="punch" data-r="4">A modern platform you <strong>own outright</strong>, at a fraction of the cost — and no licensing tail.</div>
+    </section>
+
+    <!-- ===== 6 · TWO OPTIONS w/ ROUTER (.colpair) ========================
+         Two columns (Model A / Model B) with a vertical "router" pulse between
+         them. Each .col has .mtag, h3, .d description, and a bullet <ul>. Good
+         for "two ways to do X" or "either/and" capability stories. -->
+    <section class="slide" data-i="6">
+      <div class="kicker" data-r="1">Two models, one engine</div>
+      <h1 data-r="2">Handle it <em>either</em> way.</h1>
+      <div class="colpair" data-r="3">
+        <div class="col"><div class="mtag">Model A</div><h3>Streaming</h3><div class="d">Real-time, push-based processing for live workloads.</div><ul><li>Low-latency path</li><li>Always-on feeds</li></ul></div>
+        <div class="mid"><span class="pulse"></span><div class="router">Smart Router</div><span class="pulse"></span></div>
+        <div class="col"><div class="mtag">Model B</div><h3>Batch</h3><div class="d">Scheduled, high-throughput processing for bulk jobs.</div><ul><li>Cost-efficient at scale</li><li>Replayable</li></ul></div>
+      </div>
+      <div class="punch" data-r="4">One platform — and the router picks the right model <strong>per job</strong>.</div>
+    </section>
+
+    <!-- ===== 7 · BIG-NUMBER STATS STRIP (.stats) =========================
+         A horizontal strip of headline figures. .s = one stat; .n = the number
+         (add "lime" to one for emphasis); .c = the caption. Use real, defensible
+         numbers — proof beats adjectives. Pair with a small .note for caveats. -->
+    <section class="slide" data-i="7">
+      <div class="kicker" data-r="1">Performance</div>
+      <h1 data-r="2">Built for <em>speed</em> — and built to stay up.</h1>
+      <div class="stats" data-r="3">
+        <div class="s"><div class="n">&lt; 2 ms</div><div class="c">End-to-end processing latency</div></div>
+        <div class="s"><div class="n">500K&#8211;1M+</div><div class="c">Operations per second</div></div>
+        <div class="s"><div class="n lime">&lt; 1 sec</div><div class="c">Automatic failover · zero data loss</div></div>
+        <div class="s"><div class="n">24/7</div><div class="c">Always on · no maintenance windows</div></div>
+      </div>
+      <div class="note" data-r="4">Engineered figures from system design records — validated end-to-end before go-live.</div>
+      <div class="punch" data-r="5">Speed, resilience and scale are <strong>properties of the architecture</strong> — designed in, not tuned in afterward.</div>
+    </section>
+
+    <!-- ===== 8 · STATUS CHIPS (.status) ==================================
+         Inline pill chips for states/claims. .chip.done = accent dot,
+         .chip.alt = blue dot. Use for "what's true today" checklists or
+         capability confirmations. Pairs well with a .lede above. -->
+    <section class="slide" data-i="8">
+      <div class="kicker" data-r="1">One source of record</div>
+      <h1 data-r="2">A single record — <em>across everything.</em></h1>
+      <p class="lede" data-r="3">Northwind can be the system of record across every platform and data type — <strong>designed to consolidate what you already run</strong>. One replayable, auditable book over the whole operation.</p>
+      <div class="status" data-r="4">
+        <span class="chip done"><i></i> Immutable, replayable, audit-ready</span>
+        <span class="chip done"><i></i> All data types consolidated</span>
+        <span class="chip alt"><i></i> Sits over your existing systems</span>
+      </div>
+      <div class="punch" data-r="5">Even before replacing anything, it can sit <strong>over</strong> your current stack — one source of truth.</div>
+    </section>
+
+    <!-- ===== 9 · PRINCIPLES GRID (.prin) =================================
+         Small numbered principle cards (.p with .pn label). Add a full-width
+         .p.key "keystone" card to spotlight the single most important idea. -->
+    <section class="slide" data-i="9">
+      <div class="kicker" data-r="1">The foundation beneath it</div>
+      <h1 data-r="2" style="font-size:clamp(1.8rem,3.6vw,2.8rem)">Engineering principles that make it trustworthy.</h1>
+      <div class="prin" data-r="3">
+        <div class="p"><span class="pn">P-01</span><h4>Deterministic core</h4><p>Every node computes identical results — nothing silently diverges.</p></div>
+        <div class="p"><span class="pn">P-02</span><h4>Fail-hard on bad data</h4><p>On inconsistency it stops and calls a human — wrong data is worse than none.</p></div>
+        <div class="p"><span class="pn">P-03</span><h4>Exact arithmetic</h4><p>No floating point near money — every cent is exact.</p></div>
+        <div class="p key"><span class="pn">KEYSTONE</span><div class="kt"><h4>No database in the hot path</h4><p>The in-memory log <strong style="color:var(--ink)">is</strong> the source of truth — work never waits on a disk round-trip. The database sits downstream, for analytics only.</p></div></div>
+      </div>
+      <div class="punch" data-r="4">Happy to go deeper on request — the headline is simple: <strong>built for real workloads, not demos.</strong></div>
+    </section>
+
+    <!-- ===== 10 · CAPABILITY MAP (.capgrid) ==============================
+         A dense 4-column "everything it does" grid. .cap (accent) / .cap.alt
+         (blue) alternate. Each has an h4 and a tight bullet <ul>. Great as a
+         "full picture" overview near the end. -->
+    <section class="slide" data-i="10">
+      <div class="kicker" data-r="1">The full picture</div>
+      <h1 data-r="2" style="margin-bottom:.4rem">One platform &#183; <em>every capability.</em></h1>
+      <div class="capgrid" data-r="3">
+        <div class="cap"><h4>Connectivity</h4><ul><li>REST / API</li><li>Streaming</li><li>Webhooks</li><li>Standards-native</li></ul></div>
+        <div class="cap alt"><h4>Ingestion</h4><ul><li>Aggregation</li><li>Smart routing</li><li>Custom pipelines</li><li>Any source</li></ul></div>
+        <div class="cap"><h4>Processing</h4><ul><li>Streaming</li><li>Batch</li><li>Hybrid</li><li>Replayable</li></ul></div>
+        <div class="cap alt"><h4>Management</h4><ul><li>Full lifecycle</li><li>Versioning</li><li>Rollback</li><li>De-dup</li></ul></div>
+        <div class="cap"><h4>Governance</h4><ul><li>Access control</li><li>Guardrails</li><li>Kill switches</li><li>Audit</li></ul></div>
+        <div class="cap alt"><h4>Analytics</h4><ul><li>Real-time</li><li>Dashboards</li><li>NL queries</li><li>BI exports</li></ul></div>
+        <div class="cap"><h4>Accounts</h4><ul><li>Multi-tenant</li><li>Billing</li><li>Tiers</li><li>Quotas</li></ul></div>
+        <div class="cap alt"><h4>Compliance</h4><ul><li>Record of truth</li><li>Audit trail</li><li>Reporting</li><li>Snapshot &amp; replay</li></ul></div>
+      </div>
+      <div class="punch" data-r="4">Eight domains, one platform — and a system of record that can sit <strong>over what you run today.</strong></div>
+    </section>
+
+    <!-- ===== 11 · ARCHITECTURE DIAGRAM (.arch — pure CSS, no image) =======
+         Build a layered architecture diagram in CSS: each .tier has a .tlbl
+         label and .boxes of .box2 nodes. Mark the central tier .tier.core to
+         spotlight it. Put .down arrows between tiers. Preferred over an image
+         because it stays crisp and editable.
+         NEED A REAL DIAGRAM IMAGE INSTEAD? Embed it as a base64 data URI to keep
+         the file self-contained:
+           <img class="archimg" data-r="2" src="data:image/png;base64,iVBOR..." alt="architecture">
+         Do not link external image files — the deck must be one portable file. -->
+    <section class="slide" data-i="11">
+      <div class="kicker" data-r="1">Core components</div>
+      <h1 data-r="2" style="font-size:clamp(1.8rem,3.6vw,2.8rem)">How the pieces fit together.</h1>
+      <div class="arch" data-r="3">
+        <div class="tier"><div class="tlbl">Edge</div><div class="boxes"><div class="box2"><b>API Gateway</b><small>REST / WS</small></div><div class="box2"><b>Stream Gateway</b><small>push</small></div><div class="box2"><b>Relay</b><small>stateless bridge</small></div></div></div>
+        <div class="down">&#8595;</div>
+        <div class="tier core"><div class="tlbl">Core</div><div class="boxes"><div class="box2"><b>Ingest</b></div><div class="box2"><b>Process</b></div><div class="box2"><b>Validate</b></div><div class="box2"><b>Distribute</b></div></div></div>
+        <div class="down">&#8595;</div>
+        <div class="tier"><div class="tlbl">Data</div><div class="boxes"><div class="box2"><b>Analytics store</b><small>downstream</small></div><div class="box2"><b>Audit log</b><small>replayable</small></div></div></div>
+      </div>
+      <div class="punch" data-r="4">Traffic flows through <strong>stateless edge services</strong> into the core — databases sit downstream, never in the hot path.</div>
+    </section>
+
+    <!-- ===== 12 · CLOSE ==================================================
+         A .lede that recaps the whole story in 2-3 sentences, then a final
+         .punch with an accent-colored close + thank-you. -->
+    <section class="slide" data-i="12">
+      <div class="kicker" data-r="1">In one line</div>
+      <h1 data-r="2">A platform to <em>own</em> — fast, unified, <span class="lime">bespoke-able.</span></h1>
+      <p class="lede" data-r="3">Own a modern, unified platform — consolidate your record, open new revenue, and plug into the systems you already run. Built by an AI-enabled team in under a year, at a fraction of the cost of a traditional build.</p>
+      <div class="punch" data-r="4">You get the technology <strong>and the team behind it</strong> — ready to build whatever you need next. &nbsp;<span style="color:var(--accent)">We'd be glad to show you it working. Thank you.</span></div>
+    </section>
+
+    <!-- ===== BONUS COMPONENTS (not shown above; copy into a slide as needed)
+         PILLS — compact labeled badges, e.g. tech stack or quick facts:
+           <div class="pills">
+             <div class="pill"><b>01</b><span>Owned outright</span></div>
+             <div class="pill"><b>02</b><span>Multi-asset</span></div>
+           </div>
+         SEQ — a horizontal step sequence with arrows:
+           <div class="seq">
+             <div class="st"><b>Ingest</b><small>source</small></div><span class="ar">&#8594;</span>
+             <div class="st"><b>Process</b><small>core</small></div><span class="ar">&#8594;</span>
+             <div class="st"><b>Serve</b><small>edge</small></div>
+           </div>
+         ====================================================================== -->
+
+  </main>
+
+  <nav class="dots" id="dots" aria-label="slides"></nav>
+  <div class="hint">&#8592; / &#8594; · space</div>
+
+<script>
+  const slides=[...document.querySelectorAll('.slide')];
+  const dotsWrap=document.getElementById('dots');
+  const progress=document.getElementById('progress');
+  const curEl=document.getElementById('cur');
+  const totEl=document.getElementById('tot');
+  let i=0;
+  if(totEl) totEl.textContent=String(slides.length-1).padStart(2,'0');
+  slides.forEach((_,n)=>{
+    const b=document.createElement('button');
+    b.className='dot'+(n===0?' on':''); b.setAttribute('aria-label','slide '+(n+1));
+    b.onclick=(e)=>{e.stopPropagation();go(n);}; dotsWrap.appendChild(b);
+  });
+  const dots=[...dotsWrap.children];
+  function go(n){
+    n=Math.max(0,Math.min(slides.length-1,n));
+    slides[i].classList.remove('active'); dots[i].classList.remove('on');
+    i=n;
+    slides[i].classList.add('active'); dots[i].classList.add('on');
+    progress.style.width=(i/(slides.length-1)*100)+'%';
+    curEl.textContent=String(i).padStart(2,'0');
+    document.body.classList.toggle('on-cover', i===0);
+  }
+  function next(){go(i+1)} function prev(){go(i-1)}
+  addEventListener('keydown',e=>{
+    if(e.key==='ArrowRight'||e.key===' '||e.key==='PageDown'){e.preventDefault();next();}
+    else if(e.key==='ArrowLeft'||e.key==='PageUp'){e.preventDefault();prev();}
+    else if(e.key==='Home'){go(0)} else if(e.key==='End'){go(slides.length-1)}
+  });
+  addEventListener('click',e=>{ if(e.target.closest('.dots')) return; (e.clientX > innerWidth*0.5) ? next() : prev(); });
+  progress.style.width='0%';
+  document.body.classList.add('on-cover');
+</script>
+</body>
+</html>
