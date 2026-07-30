@@ -46,6 +46,21 @@ read it in full before doing anything).
    implies more than about six, say so explicitly and let them scale it down. **Do the small files
    yourself** — a one-paragraph doc edit or a two-line config change costs less to make than to brief.
 
+4b. **Smoke-test the verification channel now, not in Phase C.** For every capability the plan's
+   verification section depends on — a browser pane that must produce an image, a preview server, a
+   device viewport, an external service — make one throwaway call to prove it works *before* any code
+   is written. Then tell the user which checks are actually runnable and which have just become manual.
+
+   This is not hypothetical: a plan specifying visual checks on nine charts reached the end of Phase C
+   before anyone discovered the browser pane could not composite a frame at all, and three separate
+   sessions burned tokens rediscovering it. Ten seconds in Phase A converts that into a known,
+   priced-in manual step the user can schedule.
+
+4c. **Validate the trigger for any manual repair step the plan asks of the user** — a re-import, a
+   migration, a deletion. Run the plan's own "is this needed?" check yourself and confirm it means what
+   the plan says it means. If the evidence doesn't hold up, say so before the user spends an afternoon
+   on it; a code fix for a latent bug is still worth shipping without the repair.
+
 5. **Preflight and branch.** Confirm a clean tree on `main`, then create the branch the plan names
    (or a sensible `feat/<slug>`). You own the branch; subagents commit onto it and never push.
 
@@ -164,6 +179,16 @@ fact. Back up what you mutate and restore it.
 Only for what you genuinely cannot reach (production-only paths, external services, real devices):
 give the user a short **numbered list of test cases with expected results**, and wait.
 
+**Prove your new guard actually fires.** Any test, assertion or conformance check added by this build
+must be shown to fail when the thing it guards is broken — break it deliberately, watch it go red,
+revert. A check whose pattern matched nothing passes for the same reason a correct one does, and it
+will be trusted for years. Do this for at least the assertions the plan called load-bearing.
+
+**Never let an unrun check pass silently into "verified".** Keep an explicit list of checks you could
+not run and why. It goes in the PR body under its own heading, not folded into the summary. "8 of 9
+charts unverified — the pane cannot screenshot; needs a look on the device" is a useful handoff;
+silence reads as a pass and the gap is never closed.
+
 ### 4. Confirm housekeeping, then open the PR
 
 Docs the plan calls for, version/cache bumps, final build + verify. Then — and only then, after
@@ -173,6 +198,14 @@ Write the PR body to explain **why**, not to list commits. Lead with the problem
 principle, then the evidence: concrete verified numbers, not "tested and working". Call out
 judgement calls you made, anything you deliberately left out of scope, and any pre-existing issue you
 found and chose not to fold in (flag those separately rather than growing the diff).
+
+Include a **"Not verified"** section whenever one applies, and a **"Follow-up not in this PR"** section
+listing what the reviewer now owns — each with enough context to act on without this session. Both are
+short. Both are the difference between a handoff and a hope.
+
+If the plan asserted something the build disproved — a number, a count, a claim of observed damage —
+**say so in the PR body in plain terms.** The plan is not the customer; the user is, and they may have
+already acted on the wrong claim.
 
 ---
 
