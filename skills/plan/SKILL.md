@@ -62,6 +62,25 @@ State every expected number **with the inputs that produce it**. `balance −453
 days → 2026-08-16` can be checked. Where a change will move numbers you haven't enumerated, **say
 so** rather than implying the list is exhaustive.
 
+### 3b. Validate any *observational* claim, not just the arithmetic
+
+A plan that says "N rows are already damaged" or "this fires in production today" will send the user
+to do expensive, sometimes irreversible manual work. So for every claim of observed damage, write down
+the query or command that produced it **and one sentence on why it is a valid proxy for the thing
+being claimed** — then check it against a case whose answer you already know.
+
+The failure this exists to prevent: a diagnostic that counts something real but *different* from the
+defect. `WHERE merchant_logo IS NULL` counts rows with no logo; it does not count rows whose logo was
+destroyed, because the upstream source legitimately supplies no logo for many rows. The number was
+correct and the conclusion was wrong, and it cost a re-import that wasn't needed.
+
+Keep the two apart in the plan's prose:
+
+- **A defect found by reading the code** is a latent defect. Say so. Fixing it is still worth doing.
+- **A defect observed in data** needs a detector whose negative case you have checked.
+
+If you can only show "consistent with", write "consistent with" — never a count.
+
 ### 4. Write the plan
 
 To `~/.claude/plans/<short-slug>.md`, using the template in the appendix. Every section there exists
@@ -138,6 +157,11 @@ The single most load-bearing section. Anything two tasks could guess differently
   condition out:* "renders at any sign" is a requirement; an example showing a zero value is not.
 - **Shared registries** — for each id/key: who **adds** it and who **references** it. A referencing
   task that runs before the adding task, or references one being deleted, produces a dead link.
+- **Lockstep lists, marked loud or silent.** Enumerate every list that must be updated together —
+  module registries, test-file manifests, verifier allowlists, enum mirrors — and for each, say
+  **whether omitting an entry fails loudly or silently**. Silent ones are the whole reason this bullet
+  exists: a test suite missing one module still runs, on a partial engine, and reports green. List them
+  explicitly and assign an owner, or the green run will be believed.
 - **Generated artifacts** — which paths are build output, whether subagents rebuild, and whether they
   commit or discard. Decide once here so no subagent improvises.
 - **Invariants, as named prohibitions with reasons.** Name them (`Invariant <X>`), say what must never
@@ -177,7 +201,24 @@ Mark each: **machine-checkable** (tests, build, lint, DOM assertions) or **needs
 (production-only paths, external services, real devices, genuine aesthetic judgement). Be strict —
 most "needs a human" checks are machine-checkable once state can be synthesised.
 
+**Prove the verification channel exists before you rely on it.** If a check depends on a capability —
+screenshotting a browser pane, running a device emulator, reaching a service — confirm that capability
+works *now*, with one throwaway call, before writing the check into the plan. A plan that specifies
+twenty visual checks against a tool that cannot produce an image has silently converted its own
+verification section into a to-do list for the user, and nobody notices until the PR is already open.
+Where the capability doesn't work, mark the check **needs a human** up front and count that cost in
+§Cost — don't leave it looking automated.
+
+**Also state what a passing check does *not* cover.** If the test suite proves arithmetic and nothing
+proves rendering, say that in one line. It's the single most useful sentence for whoever decides how
+much to trust a green run.
+
 Give exact expected values with their inputs, and include the project's own mandated gates.
+
+**Manual data-repair steps get their own trigger condition.** If the plan asks the user to re-import,
+re-download, migrate or delete anything, state (a) the check that establishes the repair is *needed*,
+(b) the check that establishes it *worked*, and (c) what is lost if it's run unnecessarily. (a) is the
+one that gets skipped, and it is the one that makes the request legitimate.
 
 ## Out of scope
 What is deliberately not being done, **and why** — so `/build` doesn't helpfully fold it in. Flag
