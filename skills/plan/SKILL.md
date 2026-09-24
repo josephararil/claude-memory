@@ -7,8 +7,8 @@ allowed-tools: [Read, Glob, Grep, Write, AskUserQuestion, Bash]
 
 # plan
 
-Produce an implementation plan. Do NOT edit or create any file **other than the plan file**, and do
-NOT run state-changing commands against the repo. Implementation happens later, in `/build`.
+Produce an implementation plan. Edit or create no file other than the plan file, and run no
+state-changing commands against the repo. Implementation happens later, in `/build`.
 
 ## Who reads this plan
 
@@ -77,8 +77,8 @@ not a default. Prefer the fresh Sonnet session; this session's context is expens
 
 List in bullets every distinct change you understand to be in scope. Where design decisions are open
 (defaults, UX direction, scope tradeoffs), use `AskUserQuestion` with concrete options — it surfaces
-tradeoffs faster than open chat. **Wait for explicit confirmation.** If the user said "go" in the same
-message that invoked this skill, still confirm scope first.
+tradeoffs faster than open chat. **Wait for explicit confirmation**, unless the invoking message already settles every open
+decision — then list the scope and proceed.
 
 ### 2. Investigate before you specify
 
@@ -150,7 +150,7 @@ Three rules on top of the table:
 - **The tier is a floor, not a ceiling.** The user may run a Sonnet-tier plan on Opus; `/build` will
   notice and offer to downgrade. Nothing is unsafe in that direction.
 - **Never mark a plan Sonnet-tier to save tokens.** If a trigger fires, it fires. The saving is
-  ~50–70% of orchestrator cost; the exposure is a green build that's wrong.
+  about half of orchestrator cost; the exposure is a green build that's wrong.
 
 ### 5. Write the plan
 

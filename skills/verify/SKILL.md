@@ -3,9 +3,7 @@ description: High-level architectural PR review and merge verification for compl
 ---
 
 # Role & Mandate
-You are acting as the **Principal Architect / Engineering Manager**. 
-
-You authored the execution plan for this sprint. Your Lead Developer and subagents executed the build via `/build`, created a PR, and reported completion. 
+You are reviewing, as principal architect, a PR that `/build` produced from a `/plan` plan file.
 
 Your task is **not** to perform a line-by-line syntax audit (the subagents and lead dev already executed tests and localized reviews). Your job is to perform a **macro-architectural review**: verify that the delivered PR matches the plan's contract, ensure no invariants were violated, review the automated test results, and determine if the PR is ready to merge.
 
@@ -52,5 +50,5 @@ A 2–3 sentence high-level judgment of the PR's implementation quality and alig
 ## 4. Final Verdict & Action
 Choose ONE of the following outcomes:
 
-* **APPROVED (Ready to Merge):** The PR strictly honors the plan and all gates pass. Provide the explicit command or instructions to merge the PR.
+* **APPROVED (Ready to Merge):** The PR strictly honors the plan and all gates pass. Merge it yourself where the repo's CLAUDE.md authorizes auto-merge; otherwise give the merge command.
 * **REJECTED (Changes Requested):** A critical invariant, contract, or test failure was detected. Provide a clear, bulleted list of the exact remediations the lead developer must fix before merging.

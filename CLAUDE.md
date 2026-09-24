@@ -80,12 +80,7 @@ Transform tasks into verifiable goals:
 - "Fix the bug" → "Write a test that reproduces it, then make it pass"
 - "Refactor X" → "Ensure tests pass before and after"
 
-For multi-step tasks, state a brief plan:
-```
-1. [Step] → verify: [check]
-2. [Step] → verify: [check]
-3. [Step] → verify: [check]
-```
+For multi-step tasks, name the check that proves each step worked.
 
 Strong success criteria let you loop independently. Weak criteria ("make it work") require constant clarification.
 
@@ -97,7 +92,6 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 
 - Never commit directly to main. Always create a feature branch.
 - After completing a feature or fix, open a PR — do not leave work on a branch without one.
-- Auto-create a PR after completing a feature or fix (auto-PR preference is enabled).
 
 **The commit messages are the real record; the PR body is a wrapper.** Write commits properly —
 subject line plus a short body saying what changed and why — and let the PR body stay thin. Title and
@@ -121,11 +115,11 @@ After any feature change or multi-file edit, update the project's CLAUDE.md in t
 
 ## 7. Verification & Caching
 
-When a change doesn't appear in the preview, assume stale cache first. Hard-refresh and confirm the service worker updated before investigating the code. Don't debug logic until cache has been ruled out.
+In a project with a service worker or build cache, when a change doesn't appear in the preview, rule out a stale cache first: hard-refresh and confirm the service worker updated before debugging the code.
 
 ## 8. Planning vs Implementation
 
-When asked for a plan, produce a plan only — do not read files to edit or begin implementation until explicitly told to proceed. Before writing a plan, restate the full scope you understand to be in scope and ask for confirmation.
+When asked for a plan, produce a plan only. Read whatever you need, but do not edit files or begin implementation until explicitly told to proceed. Before writing a plan, restate the full scope you understand to be in scope and ask for confirmation.
 
 The same holds for **"design", "proposal", "mockup" or "options"**: produce artboards, a plan file, or chat output only. Do not edit source files until I say build.
 
@@ -172,4 +166,4 @@ Same rule for the inverse: a latent bug you found by reading is a latent bug. Do
 
 ## 9. Preserving Implicit Behavior
 
-Before editing code, call out any existing behavior (logic, cooldowns, helpers) that the change might silently remove or alter. State what you plan to keep vs. remove and get confirmation before proceeding.
+Before editing code, call out any existing behavior (logic, cooldowns, helpers) that the change might silently remove or alter. If the change removes or alters any, say what you plan to keep vs. remove and get confirmation before proceeding.

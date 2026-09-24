@@ -80,9 +80,9 @@ larger than it looked (<which criterion broke>). Run `/plan` first."* Widening a
 undocumented multi-file change is exactly the improvisation the plan/build split exists to prevent.
 
 If it qualifies: clean tree on `main` → branch → make the edits **yourself** (no subagents; briefing
-costs more than typing at this size) → run the verification command → commit → and either push and
-open a short PR or leave the branch local, following whatever the project's convention is. The PR body
-still says *why*, and still carries a **Not verified** line if anything went unchecked. Skip Phases
+costs more than typing at this size) → run the verification command → commit → push and
+open a short PR, merging it yourself only where the project's CLAUDE.md authorizes that. The PR body
+carries a **Not verified** line if anything went unchecked. Skip Phases
 A2–C entirely; there are no seams to review when one agent wrote everything.
 
 ---
@@ -142,11 +142,6 @@ expensive is a plausible guess that passes review. Everything else in this skill
    verification section depends on — a browser pane that must produce an image, a preview server, a
    device viewport, an external service — make one throwaway call to prove it works *before* any code
    is written. Then tell the user which checks are actually runnable and which have just become manual.
-
-   This is not hypothetical: a plan specifying visual checks on nine charts reached the end of Phase C
-   before anyone discovered the browser pane could not composite a frame at all, and three separate
-   sessions burned tokens rediscovering it. Ten seconds in Phase A converts that into a known,
-   priced-in manual step the user can schedule.
 
 4c. **Validate the trigger for any manual repair step the plan asks of the user** — a re-import, a
    migration, a deletion. Run the plan's own "is this needed?" check yourself and confirm it means what
@@ -241,10 +236,8 @@ Give the subagent the **answer**, not the search:
 - **The frozen contract**, inline.
 - **A verification command** that proves its work compiles, and the exact commit scope.
 - **A hard ban on nesting.** A subagent that spawns its own subagents multiplies the bill invisibly
-  and produces work no brief governed. State it flatly: *"You MUST NOT launch any subagent of your
-  own. Do not call the Agent tool for a Sonnet or general-purpose agent under any circumstances.
-  (A Haiku-model agent purely to read a file is the only exception, and you almost certainly do not
-  need one.)"*
+  and produces work no brief governed. State it flatly: *"Do not launch subagents of your own (the
+  Agent tool). Each one multiplies cost and does work no brief governs."*
 - **What its verification will get wrong, and why.** In a parallel wave an agent's `npm test` may
   legitimately fail on another agent's half-landed work. Say so, and give it a narrower command that
   isolates its own scope — otherwise it spends turns debugging someone else's tree, or worse,
@@ -375,13 +368,13 @@ silence reads as a pass and the gap is never closed.
 ### 4. Confirm housekeeping, then open the PR
 
 Docs the plan calls for, version/cache bumps, final build + verify. Then — and only then, after
-review passes and any delegated tests come back green — push and open the PR against `main`.
+review passes and any delegated tests come back green — push and open the PR against `main`. Where
+the project's CLAUDE.md authorizes auto-merge, wait for CI and merge it; otherwise stop at the open PR.
 
-Write the PR body to explain **why**, not to list commits. Lead with the problem, state the design
-principle, then the evidence: concrete verified numbers, not "tested and working". Call out
-judgement calls you made, anything you deliberately left out of scope, and any pre-existing issue you
-found and chose not to fold in (flag those separately rather than growing the diff). Note the
-orchestrator tier in one line — a reviewer reads a Sonnet-orchestrated diff differently.
+Put the **why** in the commit messages: the problem, the design principle, concrete verified
+numbers, and the judgement calls. Commits are the record that gets read. Keep the PR body thin: a
+title, a one-line summary, the orchestrator tier in one line, and the two sections below. Get it
+right on `gh pr create`; if scope grows afterwards, add a commit rather than editing the body.
 
 Include a **"Not verified"** section whenever one applies, and a **"Follow-up not in this PR"** section
 listing what the reviewer now owns — each with enough context to act on without this session. Both are
@@ -416,7 +409,8 @@ already acted on the wrong claim.
 - Worker model is always Sonnet, pinned via the subagent's `model`; reasoning-effort tier can't be
   pinned and inherits the session default — say so plainly, don't imply "medium".
 - On Sonnet tier, escalate on the §Running as a Sonnet orchestrator triggers instead of adjudicating.
-- The PR push is the only irreversible outward action. Gate it behind a passing review.
+- Pushing, opening the PR and merging are the irreversible outward actions. Gate them behind a
+  passing review.
 
 ---
 
@@ -427,11 +421,8 @@ You are implementing ONE narrowly-scoped task on branch <branch> in <repo>.
 Do not switch branches. Do not push.
 
 HARD LIMITS
-- You MUST NOT launch any subagent of your own. Do not call the Agent tool for a
-  Sonnet or general-purpose agent under any circumstances. (A Haiku-model agent
-  purely to read a file is the only exception, and you almost certainly do not
-  need one.)
-- Do not explore the repo. Everything you need is below.
+- Do not launch subagents of your own (the Agent tool). Each one multiplies cost
+  and does work no brief governs.
 - Do not run <the expensive/global commands this task has no business running>.
 
 READ FIRST (and nothing else — do not explore the repo):
