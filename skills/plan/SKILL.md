@@ -1,14 +1,14 @@
 ---
 name: plan
-description: Plan a feature with the user and write an orchestration-ready implementation plan to ~/.claude/plans for /build to execute. No code changes.
+description: Plan a feature with the user and write an orchestration-ready implementation plan to ~/.claude/plans for /build to execute. Triages first — small work is sent straight to /build with no plan — and declares which model tier must orchestrate the build. No code changes.
 argument-hint: [feature or task description]
 allowed-tools: [Read, Glob, Grep, Write, AskUserQuestion, Bash]
 ---
 
 # plan
 
-Produce an implementation plan. Do NOT edit or create any file **other than the plan file**, and do
-NOT run state-changing commands against the repo. Implementation happens later, in `/build`.
+Produce an implementation plan. Edit or create no file other than the plan file, and run no
+state-changing commands against the repo. Implementation happens later, in `/build`.
 
 ## Who reads this plan
 
@@ -16,7 +16,7 @@ NOT run state-changing commands against the repo. Implementation happens later, 
 farms the mechanical work to Sonnet subagents that each start from an empty context and see **only
 their own brief** — no planning conversation, no sibling tasks, no sight of each other's edits.
 
-Two consequences shape everything below:
+Three consequences shape everything below:
 
 1. **A subagent cannot derive.** Every value, string, signature and expected number it needs must be
    written down. A subagent inventing a number is the main way builds go wrong, and it happens
@@ -24,6 +24,11 @@ Two consequences shape everything below:
 2. **Bugs collect in the seams.** What breaks is never inside one file — it's the contract *between*
    files, where no subagent can see both sides. Your job is to specify those contracts so they can't
    be independently guessed two different ways.
+3. **The orchestrator might be Sonnet.** Most plans don't need an Opus orchestrator, and running one
+   anyway is a straight waste. But some plans are only safe under Opus, and a Sonnet orchestrator
+   cannot know which kind it has been handed. **You decide the tier** (§4b below) and write it into
+   the plan. Getting this wrong in the cheap direction produces a build that compiles, reports
+   green, and is wrong.
 
 A plan that reads beautifully but leaves a prop shape, a unit, or a registry owner unstated will
 produce a build that compiles and is wrong.
@@ -32,12 +37,48 @@ produce a build that compiles and is wrong.
 
 ## Instructions
 
+### 0. Triage — does this need a plan at all?
+
+Planning has a fixed cost: this session, a plan file, then a fresh `/build` session that re-reads it.
+For small work that cost exceeds the work itself. **Before restating scope, decide whether a plan is
+warranted at all.**
+
+Skip the plan and hand the work straight to `/build` when **all** of these hold:
+
+- **Small edit surface** — roughly one or two files, and you can name the exact edit sites without
+  exploring the repo.
+- **No new cross-file contract** — no new or changed exported signature, prop shape, stored field, or
+  registry id that something else consumes.
+- **No arithmetic to verify** — no derived numbers, no units or divisors, no expected values a
+  subagent could get plausibly wrong.
+- **No migration, no destructive operation, no generated-artifact question**, and nothing the user
+  would have to repair by hand afterwards.
+- **Verification is one existing command** (the project's test or build), or a single obvious check.
+
+The underlying test is the same one `/build` applies to its own small edits: **if briefing the work
+costs more than doing it, don't brief it.** Any single failure above and you continue to §1.
+
+If it qualifies, don't write a plan file. Output only:
+
+> **No plan needed.** This is <one line on why: N files, additive, no cross-file contract>.
+> Run this in a fresh **Sonnet** session:
+> `/build <one-paragraph brief: exact files, exact change, verbatim strings/values, verify command>`
+> I can also just do it here if you'd rather not switch sessions — say the word and I'll drop the
+> read-only rule for this one change.
+
+Two notes on that. The brief must be self-contained for the same reason subagent briefs are — the
+`/build` session starts empty. And the read-only rule exists so a planning session can't
+half-implement its own plan; offering to break it for a two-line change is a deliberate exception,
+not a default. Prefer the fresh Sonnet session; this session's context is expensive per turn.
+
+> These criteria are duplicated verbatim in `/build` §Direct mode. Keep the two in sync.
+
 ### 1. Restate scope, and get confirmation
 
 List in bullets every distinct change you understand to be in scope. Where design decisions are open
 (defaults, UX direction, scope tradeoffs), use `AskUserQuestion` with concrete options — it surfaces
-tradeoffs faster than open chat. **Wait for explicit confirmation.** If the user said "go" in the same
-message that invoked this skill, still confirm scope first.
+tradeoffs faster than open chat. **Wait for explicit confirmation**, unless the invoking message already settles every open
+decision — then list the scope and proceed.
 
 ### 2. Investigate before you specify
 
@@ -81,12 +122,42 @@ Keep the two apart in the plan's prose:
 
 If you can only show "consistent with", write "consistent with" — never a count.
 
-### 4. Write the plan
+### 4. Decide the execution tier
+
+You have just read the code and pre-computed the numbers, so you are the only participant in a
+position to judge this cheaply. Decide it explicitly and record it in §Execution.
+
+**Opus orchestrator if ANY of these is true:**
+
+| # | Trigger | Why Sonnet isn't enough |
+|---|---|---|
+| 1 | The plan asserts derived numbers, formulas, or units that `/build` must reconcile in its arithmetic probe | Deciding whether the *plan* or the *reading* is wrong is a judgement call, and the wrong answer is invisible |
+| 2 | A data migration, destructive operation, or manual repair step for the user | Irreversible; the cost of a wrong call is unbounded |
+| 3 | An invariant whose violation produces a plausible wrong value rather than an error | Nothing goes red, so review is the only detector |
+| 4 | Three or more concurrent subagents, **or** any prop/signature/registry contract written by one task and consumed by another | Seam review across many sides is the hardest thing in the build |
+| 5 | A known-unresolved question, a "consistent with" claim, or a latent defect left for the builder to adjudicate | You have explicitly deferred a judgement call to the orchestrator |
+| 6 | Any task you have marked **[OPUS]** in §Tasks | Same reason you marked it |
+
+**Otherwise: Sonnet orchestrator.** The typical Sonnet-tier plan is up to two subagents on disjoint
+files, additive-only, contract fully frozen with no unit ambiguity, verification machine-checkable
+with pre-computed expected values, no migration and no user repair step.
+
+Three rules on top of the table:
+
+- **A single [OPUS] task makes the whole build Opus.** Don't try to pin an Opus subagent under a
+  Sonnet orchestrator — the orchestrator still has to adjudicate that task's output, which is the
+  part that needed Opus in the first place.
+- **The tier is a floor, not a ceiling.** The user may run a Sonnet-tier plan on Opus; `/build` will
+  notice and offer to downgrade. Nothing is unsafe in that direction.
+- **Never mark a plan Sonnet-tier to save tokens.** If a trigger fires, it fires. The saving is
+  about half of orchestrator cost; the exposure is a green build that's wrong.
+
+### 5. Write the plan
 
 To `~/.claude/plans/<short-slug>.md`, using the template in the appendix. Every section there exists
-because its absence broke a real build. Then do step 5 before you hand it over.
+because its absence broke a real build. Then do step 6 before you hand it over.
 
-### 5. Run a consistency pass — the plan is a spec, and specs contradict themselves
+### 6. Run a consistency pass — the plan is a spec, and specs contradict themselves
 
 Re-read what you wrote, hunting for two sections that disagree. The specific failure to look for:
 **a "delete these" list versus a content table that still uses one of them.** Two different subagents
@@ -96,12 +167,17 @@ particular:
 - deletion lists vs. copy/content tables, fixture tables, and example output;
 - a renamed field vs. every place the old name still appears in your own prose;
 - a task's file set vs. the edit sites you described for it;
-- the completion checklist vs. the task table — every actionable item in exactly one task.
+- the completion checklist vs. the task table — every actionable item in exactly one task;
+- **§Execution vs. §Tasks and §Verification** — a Sonnet tier alongside an [OPUS] task, a migration,
+  three concurrent agents, or a cross-task contract is a contradiction. Resolve it toward Opus.
 
-### 6. Stop
+### 7. Stop
 
-End with: "Plan written to `<path>`. It specifies **N tasks** (**M** parallelisable), roughly
-**<estimate>** of subagent work. Run **/build** when you want me to implement it."
+End with: "Plan written to `<path>`. **Run /build in a <Sonnet|Opus> session** (<reason in six
+words>). It specifies **N tasks** (**M** parallelisable), roughly **<estimate>** of subagent work."
+
+Naming the session model in the closing line is the whole point of the tier decision — it's the last
+thing the user reads before opening the next session.
 
 ---
 
@@ -110,10 +186,13 @@ End with: "Plan written to `<path>`. It specifies **N tasks** (**M** parallelisa
 - No file edits except the plan file in `~/.claude/plans/`. No state-changing commands against the
   repo. `Bash` is for read-only inspection and scratchpad arithmetic probes only.
 - Do not begin implementation; that is `/build`'s job.
+- **Triage before planning.** Work that fails no §0 criterion doesn't get a plan file.
 - **Pre-compute everything.** Exact strings verbatim, exact numbers with their inputs, exact
   signatures. If you find yourself writing "the implementer should determine", stop and determine it.
 - **Specify every cross-file contract.** If two tasks touch the same interface, its shape belongs in
   the Contract section, not in prose inside one task.
+- **Declare the execution tier, with the triggers that decided it.** `/build` honours it and does not
+  re-derive it — a Sonnet orchestrator has no way to notice what it can't handle.
 - **Every actionable item goes in the task table.** Items that live only in a "Flags", "Risks" or
   "Cleanups" appendix get silently dropped, because no task owns them.
 - **Identify edit sites by symbol plus a unique anchor string**, with line numbers as a hint only.
@@ -131,10 +210,22 @@ End with: "Plan written to `<path>`. It specifies **N tasks** (**M** parallelisa
 ````markdown
 # <Feature name>
 
-> **Handoff note.** Executed by `/build`: an Opus orchestrator delegating to Sonnet subagents.
+> **Handoff note.** Executed by `/build`. **Run /build in a <Sonnet|Opus> session — see §Execution.**
 > **§Tasks is the work contract** — read it before starting. Every value, string and expected number
 > here is pre-computed so subagents implement rather than derive. Tasks marked **[ORCHESTRATOR]** must
-> not be delegated.
+> not be delegated; tasks marked **[OPUS]** additionally require an Opus orchestrator.
+
+## Execution  ← read before opening the /build session
+| | |
+|---|---|
+| **Orchestrator** | Sonnet / Opus |
+| **Reasoning effort** | default (Sonnet tier) / high (Opus tier) |
+| **Subagents** | Sonnet, N of them, M parallel |
+| **Tier decided by** | trigger(s) fired, or "no triggers — mechanical, additive, 2 disjoint files" |
+
+If the tier is **Sonnet**, state in one line what would flip it to Opus, so the orchestrator knows
+which discovery means stop-and-escalate: e.g. *"flip to Opus if the arithmetic probe disagrees with
+§Verification, or if any subagent reports an off-spec change."*
 
 ## Context
 Why this change, what prompted it, the intended outcome. Name the design principle that should settle
@@ -171,13 +262,17 @@ The single most load-bearing section. Anything two tasks could guess differently
 ## Tasks
 | # | Task | Owner | Files (exact) | Depends on | Additive-only? |
 |---|---|---|---|---|---|
-| 1 | … | Orchestrator / Sonnet | `y/calc.jsx` | — | — |
+| 1 | … | Orchestrator / Orchestrator [OPUS] / Subagent | `y/calc.jsx` | — | — |
 
 - **Files** must be exact and complete — `/build` schedules concurrency by **file exclusivity**, so a
   missing path causes two agents to collide and a spurious one serialises work needlessly.
-- **Owner**: keep for the orchestrator anything where a wrong guess is expensive and invisible —
-  core algorithms, data migrations, invariant enforcement, anything whose failure mode is a plausible
-  wrong number. Give Sonnet everything mechanical, which is most of it.
+- **Owner** has two independent axes, and conflating them is how plans over-order Opus:
+  - *Who does it* — `Orchestrator` for anything where a wrong guess is expensive and invisible, or
+    too small to be worth briefing. `Subagent` for everything mechanical, which is most of it.
+  - *What capability it needs* — add **[OPUS]** only where the work needs frontier reasoning: core
+    algorithms, data migrations, invariant enforcement, anything whose failure mode is a plausible
+    wrong number. An orchestrator task is not automatically an [OPUS] task; a three-line config edit
+    kept in-house is `Orchestrator` and nothing more.
 - **Additive-only** means the tree still compiles mid-task; flag it so ordering is safe.
 - Name the **contended files** explicitly: "`y/ui.jsx` has three tasks — serialise them."
 
@@ -218,15 +313,16 @@ Give exact expected values with their inputs, and include the project's own mand
 **Manual data-repair steps get their own trigger condition.** If the plan asks the user to re-import,
 re-download, migrate or delete anything, state (a) the check that establishes the repair is *needed*,
 (b) the check that establishes it *worked*, and (c) what is lost if it's run unnecessarily. (a) is the
-one that gets skipped, and it is the one that makes the request legitimate.
+one that gets skipped, and it is the one that makes the request legitimate. Note that any such step
+forces the **Opus** tier.
 
 ## Out of scope
 What is deliberately not being done, **and why** — so `/build` doesn't helpfully fold it in. Flag
 anything real found along the way that should become its own piece of work.
 
 ## Cost
-N tasks, M parallelisable, rough token estimate. If it implies more than about six subagents, say so
-plainly so the user can scale it down before spending.
+Orchestrator tier and why. N tasks, M parallelisable, rough token estimate. If it implies more than
+about six subagents, say so plainly so the user can scale it down before spending.
 
 ## Completion checklist
 - [ ] Every actionable item, flat, cross-referenced to its task (`→ Task 3`).

@@ -1,7 +1,7 @@
 ---
 name: build
-description: Implement a locked plan from /plan — freeze its contract, orchestrate Sonnet subagents under file exclusivity on a feature branch, review the seams between them, and open a PR. Spawns subagents and changes state, so it runs only after the plan is approved.
-argument-hint: [optional: plan name or path — defaults to the newest plan]
+description: Implement a locked plan from /plan — or a small change directly, with no plan. Honours the plan's declared orchestrator tier, freezes its contract, orchestrates Sonnet subagents under file exclusivity on a feature branch, reviews the seams between them, and opens a PR. Spawns subagents and changes state, so it runs only after the plan is approved.
+argument-hint: [plan name or path, or a self-contained brief for a small direct change]
 allowed-tools: [Read, Glob, Grep, Edit, Write, Bash, PowerShell, Agent, AskUserQuestion, mcp__Claude_Browser__preview_start, mcp__Claude_Browser__navigate, mcp__Claude_Browser__read_page, mcp__Claude_Browser__computer, mcp__Claude_Browser__javascript_tool, mcp__Claude_Browser__read_console_messages, mcp__Claude_Browser__resize_window, mcp__Claude_Browser__form_input, mcp__ccd_session__spawn_task]
 ---
 
@@ -12,15 +12,98 @@ the mechanical work to Sonnet subagents, review the seams they cannot see, and o
 
 Works whether you run it in the **same session as `/plan`** (you still have the planning context —
 ideal) or in a **fresh session** (you don't — so the plan file is the single source of truth and you
-read it in full before doing anything).
+read it in full before doing anything). It also runs **without a plan at all** for small changes —
+see §Direct mode.
 
-**The two failure modes this skill exists to prevent.** Everything below serves one or the other:
+**The three failure modes this skill exists to prevent.** Everything below serves one of them:
 
 1. **Seam breakage.** Each subagent sees only its own file. Bugs collect in the contracts *between*
    files — prop shapes, registry ids, assumed fields — where no agent's self-report and no unit test
    will find them. Phase C hunts these deliberately.
 2. **Cost blowup.** A vague brief makes a subagent explore the repo instead of editing it, and
-   exploration is where the tokens go. Phase B's briefs give answers, not search problems.
+   exploration is where the tokens go. Phase B's briefs give answers, not search problems. An Opus
+   orchestrator on a mechanical plan is the same waste one level up. Phase 0 catches it.
+3. **Mis-tiered orchestration.** A Sonnet orchestrator running a plan that needed Opus doesn't fail
+   loudly — it adjudicates something it shouldn't have and ships a green, wrong build. Phase 0 gates
+   this, and §Running as a Sonnet orchestrator says what to do when the plan's edges show.
+
+---
+
+## Phase 0 — Triage the invocation (before anything else)
+
+**0.1 — Plan or direct?** If `$ARGUMENTS` names a plan (slug or path), or names nothing and
+`~/.claude/plans/` has a recent candidate, this is a plan build: continue to 0.2. If `$ARGUMENTS` is a
+task description rather than a plan reference, and no plan matches it, go to **§Direct mode** — don't
+invent a plan file for a two-file change.
+
+**0.2 — Check the tier you're running at.** Read the plan's **§Execution** section (and its handoff
+note) first — before reading the rest of the plan, so you spend nothing if you're the wrong model.
+Then state, in one line, the plan's required orchestrator and the model you believe this session is
+running as. If you can't determine your own model with confidence, **say so and ask** rather than
+assuming; a wrong assumption here is the failure this step exists to prevent.
+
+- **Plan says Opus, you are Sonnet → stop.** Do not read further, do not branch. Say: *"This plan is
+  Opus-tier (<triggers>). Restart `/build` in an Opus session."* Do not offer to try anyway. The
+  triggers exist because the failure mode is invisible.
+- **Plan says Sonnet, you are Opus → offer the downgrade once.** One line: *"This plan is Sonnet-tier;
+  restarting in Sonnet saves roughly half the orchestration cost. Continue on Opus, or restart?"* Use
+  `AskUserQuestion` and wait. Continuing is safe, just expensive — the build, not the plan-reading, is
+  where the money goes, so it's still worth asking at this point.
+- **Match → proceed**, and if you are Sonnet, read §Running as a Sonnet orchestrator now.
+- **No §Execution section** (an older plan) → derive the tier yourself from `/plan`'s triggers:
+  derived numbers to reconcile, a migration or manual repair step, an invariant whose violation looks
+  correct, three or more concurrent subagents, any cross-task prop/signature/registry contract, or any
+  deferred judgement call. Any one of those means Opus. State which way you read it before continuing.
+
+Subagents are Sonnet in either tier. The tier is about *your* seat, not theirs.
+
+---
+
+## Direct mode — small change, no plan
+
+Confirm the work actually qualifies. All of these must hold:
+
+- **Small edit surface** — roughly one or two files, and you can name the exact edit sites without
+  exploring the repo.
+- **No new cross-file contract** — no new or changed exported signature, prop shape, stored field, or
+  registry id that something else consumes.
+- **No arithmetic to verify** — no derived numbers, no units or divisors, no expected values that
+  could be plausibly wrong.
+- **No migration, no destructive operation, no generated-artifact question**, and nothing the user
+  would have to repair by hand afterwards.
+- **Verification is one existing command**, or a single obvious check.
+
+> These criteria are duplicated verbatim in `/plan` §0. Keep the two in sync.
+
+If any fails — or if it fails *once you start reading the code* — **stop and say so**: *"This is
+larger than it looked (<which criterion broke>). Run `/plan` first."* Widening a direct build into an
+undocumented multi-file change is exactly the improvisation the plan/build split exists to prevent.
+
+If it qualifies: clean tree on `main` → branch → make the edits **yourself** (no subagents; briefing
+costs more than typing at this size) → run the verification command → commit → push and
+open a short PR, merging it yourself only where the project's CLAUDE.md authorizes that. The PR body
+carries a **Not verified** line if anything went unchecked. Skip Phases
+A2–C entirely; there are no seams to review when one agent wrote everything.
+
+---
+
+## Running as a Sonnet orchestrator
+
+You have a plan whose author judged it mechanical. That judgement is only valid while the plan holds.
+**When the plan's edges show, you escalate rather than adjudicate.** Stop, report to the user in one
+short block, and recommend a fresh Opus `/build` session on the same branch. Specifically:
+
+- The Phase A arithmetic probe **disagrees** with the plan's stated expected values.
+- A verification capability the plan assumed **doesn't work** (Phase A2 smoke test fails).
+- A subagent reports an **off-spec change**, a **flagged workaround**, or **contract drift**.
+- Seam review turns up an ambiguity the Contract doesn't settle, and settling it means choosing a
+  number, a unit, or an invariant's meaning.
+- The plan asserts something the build **disproves**.
+- Anything that would require **widening scope** to complete.
+
+Escalating is cheap and the right outcome; the branch and commits survive the session. What is
+expensive is a plausible guess that passes review. Everything else in this skill you execute normally
+— the mechanics of briefing, file exclusivity, and grep-both-ways seam checking do not need Opus.
 
 ---
 
@@ -29,6 +112,13 @@ read it in full before doing anything).
 1. **Locate the plan.** If `$ARGUMENTS` names one (slug or path), use it. Otherwise take the most
    recently modified `*.md` in `~/.claude/plans/`. If you auto-picked, confirm it's the right one —
    the wrong plan is the one mistake worth a question.
+
+1b. **Look for a checkpoint before anything else.** If `~/.claude/plans/<plan-slug>.checkpoint.md`
+   exists and is not marked `COMPLETE`, a previous session died mid-build — usually on a usage limit.
+   **Resume from it; do not restart.** Check out its branch, confirm each task it lists as done has
+   its commit on that branch (`git log --oneline`), re-read the frozen contract it carries, and pick
+   up at the first task not marked done. A task marked `dispatched` but with no commit died with its
+   agent: re-dispatch it from the same brief. Tell the user in one line what you are resuming from.
 
 2. **Read it in full.** Then build a **completion checklist of every actionable item**, not just the
    ones in the plan's task or wave table. Items in appendices — "Flags", "Opportunistic cleanups",
@@ -39,27 +129,26 @@ read it in full before doing anything).
    (in your scratchpad, never the repo) and check the plan's stated expected values against a quick
    implementation of its formulas. Finding that a plan's number is inconsistent is cheap now and
    expensive once a subagent has built assertions on it. If one doesn't reconcile, work out whether
-   the plan or your reading is wrong; raise it with the user if it changes scope.
+   the plan or your reading is wrong; raise it with the user if it changes scope. **On Sonnet tier, a
+   mismatch here is an escalation, not a call to make.**
 
 4. **State the cost before spending it.** Count the subagents the plan implies and tell the user, in
-   one line: how many agents, which are parallel, and that each typically runs 50–150k tokens. If it
-   implies more than about six, say so explicitly and let them scale it down. **Do the small files
-   yourself** — a one-paragraph doc edit or a two-line config change costs less to make than to brief.
+   one line: the orchestrator tier you're running at, how many agents, which are parallel, and that
+   each typically runs 50–150k tokens. If it implies more than about six, say so explicitly and let
+   them scale it down. **Do the small files yourself** — a one-paragraph doc edit or a two-line config
+   change costs less to make than to brief.
 
 4b. **Smoke-test the verification channel now, not in Phase C.** For every capability the plan's
    verification section depends on — a browser pane that must produce an image, a preview server, a
    device viewport, an external service — make one throwaway call to prove it works *before* any code
    is written. Then tell the user which checks are actually runnable and which have just become manual.
 
-   This is not hypothetical: a plan specifying visual checks on nine charts reached the end of Phase C
-   before anyone discovered the browser pane could not composite a frame at all, and three separate
-   sessions burned tokens rediscovering it. Ten seconds in Phase A converts that into a known,
-   priced-in manual step the user can schedule.
-
 4c. **Validate the trigger for any manual repair step the plan asks of the user** — a re-import, a
    migration, a deletion. Run the plan's own "is this needed?" check yourself and confirm it means what
    the plan says it means. If the evidence doesn't hold up, say so before the user spends an afternoon
-   on it; a code fix for a latent bug is still worth shipping without the repair.
+   on it; a code fix for a latent bug is still worth shipping without the repair. (A plan containing
+   such a step should be Opus-tier; if you're on Sonnet and one appears, that's a mis-tiered plan —
+   escalate.)
 
 5. **Preflight and branch.** Confirm a clean tree on `main`, then create the branch the plan names
    (or a sensible `feat/<slug>`). You own the branch; subagents commit onto it and never push.
@@ -82,6 +171,10 @@ could disagree about:
   (a restored template pointing at a rebuilt bundle, or vice versa).
 - **The invariants that must not be "helpfully" fixed**, stated as prohibitions with the reason.
 
+Everything here should already be in the plan's §Contract — you are transcribing and pinning, not
+inventing. **If you find yourself deciding one of these rather than copying it, the plan has a gap:**
+on Opus, decide it and say so explicitly; on Sonnet, escalate.
+
 Write it to your scratchpad and hand every subagent **both** the path *and* the parts it needs
 inline — a path alone gets skimmed. Also record it in the code itself (a comment at the primitive, a
 line in the project's CLAUDE.md), because the scratchpad note dies with the session.
@@ -89,6 +182,37 @@ line in the project's CLAUDE.md), because the scratchpad note dies with the sess
 ---
 
 ## Phase B — Orchestrate
+
+### Size the fan-out before writing a single brief
+
+A subagent costs 50–150k tokens whether its task is 400 lines or 40. **The brief, not the task, is
+the floor on the price.** So the plan's task table is a proposal, not a schedule — re-price it:
+
+- **Delegate** a task that is genuinely large (a new module, a wide interlocking edit, a file you'd
+  otherwise have to read in full), or that would force *you* to load a big file into your own context
+  to do it.
+- **Do it yourself** when the plan has already specified it completely and it lands in one or two
+  files at a scale you can type. A fully-specified ~40-line edit across one file is faster to make
+  than to brief, and you were going to read the anchors anyway during seam review.
+
+Say the re-pricing out loud in the cost line: *"the plan implies 4 agents; task 4 is ~40 lines in one
+file, so I'll do that one myself — 3 agents."* Dropping the smallest task from a wave is usually the
+single biggest saving available, and it costs nothing in quality because you review that seam anyway.
+
+Don't over-correct. Doing a large task yourself to "save tokens" just moves the same work into the
+context you need for seam review, which is the expensive place to run out.
+
+### Fill the wait
+
+Once the wave is running you are idle, and idle orchestrator turns are pure overhead. Do the
+dependency-free work now, not after:
+
+- Tasks you kept in-house whose files no running agent touches.
+- Docs the plan calls for — the contract is frozen, so this rarely needs rework.
+- Anything you can prepare but not yet apply (a registry edit that needs a not-yet-created file).
+
+Don't speculatively re-read files the agents are rewriting, and don't poll them. Their reports arrive
+on their own.
 
 ### The scheduling rule
 
@@ -111,10 +235,21 @@ Give the subagent the **answer**, not the search:
   A subagent inventing a number is the main failure mode, and it happens when the brief omits one.
 - **The frozen contract**, inline.
 - **A verification command** that proves its work compiles, and the exact commit scope.
+- **A hard ban on nesting.** A subagent that spawns its own subagents multiplies the bill invisibly
+  and produces work no brief governed. State it flatly: *"Do not launch subagents of your own (the
+  Agent tool). Each one multiplies cost and does work no brief governs."*
+- **What its verification will get wrong, and why.** In a parallel wave an agent's `npm test` may
+  legitimately fail on another agent's half-landed work. Say so, and give it a narrower command that
+  isolates its own scope — otherwise it spends turns debugging someone else's tree, or worse,
+  "fixes" it.
 - **This instruction, verbatim:** *"Do not change [the protected invariants]. If the spec seems wrong
   or incomplete, stop and report rather than improvising."*
 
 Do **not** hand a subagent the whole plan and ask it to find its part.
+
+Pin `model: sonnet` on every subagent regardless of your own tier. If a task in the plan is marked
+**[OPUS]**, you are on Opus and you do that task yourself — don't pin an Opus subagent, because the
+part that needed Opus is the adjudication of the result, which lands back on you either way.
 
 ### Reading what comes back
 
@@ -129,8 +264,46 @@ things that matter more than pass/fail:
 - **Contract drift.** Any agent that changed a shared shape has just invalidated another agent's
   brief. Fix the other side yourself, or re-brief.
 
+All three are escalation triggers on Sonnet tier. Adjudicating an off-spec change is precisely the
+judgement the plan's tier decision was about.
+
 Halt on failure, on a missing commit, or on a broken base. Never build the next wave on a broken one.
 Never widen scope: a task that can't be done as planned is a stop-and-ask, not an improvisation.
+
+### Checkpoint after every task
+
+Long builds hit usage limits, and a limit kills the running agents and the session with them. The
+scratchpad dies too. So keep **`~/.claude/plans/<plan-slug>.checkpoint.md`** — next to the plan,
+never in the repo — and rewrite it at three moments:
+
+1. **After Phase A2**, before any dispatch: create it.
+2. **When you dispatch a task**: mark it `dispatched`.
+3. **When a task's commit lands** (agent or in-house): mark it `done` with the short SHA, plus any
+   accepted workaround or off-spec decision from "Reading what comes back".
+
+It holds exactly what a fresh session needs to carry on from this file alone:
+
+```markdown
+# Checkpoint — <plan-slug>
+branch: <branch>   base: <sha>   tier: <opus|sonnet>   updated: <ISO timestamp>
+
+## Frozen contract
+<the Phase A2 note, inline — not a scratchpad path>
+
+## Tasks
+| # | Task | State | Commit | Notes |
+|---|---|---|---|---|
+| 1 | … | done | abc1234 | accepted local compute of X, see seam review |
+| 2 | … | dispatched | — | brief: <one line> |
+| 3 | … | pending | — | |
+
+## Phase C checklist
+<the Phase A completion checklist, ticked as you go>
+```
+
+Cost is one small write per task, and it replaces re-deriving a half-finished build from `git log`.
+When the PR is open, set the header's first line to `# Checkpoint — <plan-slug> — COMPLETE (PR #N)`
+so a later `/build` doesn't try to resume it.
 
 ---
 
@@ -156,6 +329,9 @@ agents**, check *both* sides:
 Then diff the whole branch (`git diff main...HEAD`) and read it as a senior engineer: correctness,
 fidelity to the plan, leftover TODOs, invariant violations. Sweep for the patterns the plan forbade.
 Small fixes yourself; anything larger, one more focused subagent.
+
+The mechanics above are grep-and-read work at any tier. What differs: on Sonnet, a seam whose correct
+resolution isn't already written in the Contract is a stop-and-escalate, not a judgement call.
 
 ### 2. Tick off the Phase A checklist
 
@@ -192,12 +368,13 @@ silence reads as a pass and the gap is never closed.
 ### 4. Confirm housekeeping, then open the PR
 
 Docs the plan calls for, version/cache bumps, final build + verify. Then — and only then, after
-review passes and any delegated tests come back green — push and open the PR against `main`.
+review passes and any delegated tests come back green — push and open the PR against `main`. Where
+the project's CLAUDE.md authorizes auto-merge, wait for CI and merge it; otherwise stop at the open PR.
 
-Write the PR body to explain **why**, not to list commits. Lead with the problem, state the design
-principle, then the evidence: concrete verified numbers, not "tested and working". Call out
-judgement calls you made, anything you deliberately left out of scope, and any pre-existing issue you
-found and chose not to fold in (flag those separately rather than growing the diff).
+Put the **why** in the commit messages: the problem, the design principle, concrete verified
+numbers, and the judgement calls. Commits are the record that gets read. Keep the PR body thin: a
+title, a one-line summary, the orchestrator tier in one line, and the two sections below. Get it
+right on `gh pr create`; if scope grows afterwards, add a commit rather than editing the body.
 
 Include a **"Not verified"** section whenever one applies, and a **"Follow-up not in this PR"** section
 listing what the reviewer now owns — each with enough context to act on without this session. Both are
@@ -211,18 +388,29 @@ already acted on the wrong claim.
 
 ## Rules
 
+- Check the tier before reading the plan. Sonnet on an Opus plan is a hard stop; Opus on a Sonnet plan
+  is one offer to downgrade, then proceed.
+- Small change with no plan → §Direct mode. Discovering mid-way that it isn't small → stop, run
+  `/plan`. Never grow a direct build into an undocumented multi-file change.
 - Read the plan in full before acting. It's the source of truth, especially in a fresh session.
 - One feature branch off `main`. Subagents **commit but never push**. Only Phase C pushes and PRs.
 - Concurrency is bounded by **file exclusivity**, not by a one-at-a-time rule.
-- Freeze the contract before any code, and put it somewhere that outlives the session.
+- Freeze the contract before any code, and put it somewhere that outlives the session. Transcribe it
+  from the plan; deciding it yourself means the plan has a gap.
 - Every brief is self-contained: exact files, exact line ranges, verbatim values, and an explicit
   list of what not to read.
 - Seam review is not optional and not light — it's the only place cross-file bugs are findable.
 - Never exceed the locked scope. Can't-be-done-as-planned is a stop-and-ask.
-- Do small edits yourself. Briefing costs more than typing for anything under a few lines.
-- Worker model is pinned via the subagent's `model`; reasoning-effort tier can't be pinned and
-  inherits the session default — say so plainly, don't imply "medium".
-- The PR push is the only irreversible outward action. Gate it behind a passing review.
+- Re-price the plan's task table before delegating: a subagent costs 50–150k tokens regardless of
+  task size, so a fully-specified one-or-two-file edit is cheaper to type than to brief. Say the
+  re-pricing in the cost line.
+- Subagents **may not spawn subagents**. Put the ban in every brief, verbatim.
+- While a wave runs, do dependency-free work (in-house tasks, docs) rather than idling or polling.
+- Worker model is always Sonnet, pinned via the subagent's `model`; reasoning-effort tier can't be
+  pinned and inherits the session default — say so plainly, don't imply "medium".
+- On Sonnet tier, escalate on the §Running as a Sonnet orchestrator triggers instead of adjudicating.
+- Pushing, opening the PR and merging are the irreversible outward actions. Gate them behind a
+  passing review.
 
 ---
 
@@ -231,6 +419,11 @@ already acted on the wrong claim.
 ```
 You are implementing ONE narrowly-scoped task on branch <branch> in <repo>.
 Do not switch branches. Do not push.
+
+HARD LIMITS
+- Do not launch subagents of your own (the Agent tool). Each one multiplies cost
+  and does work no brief governs.
+- Do not run <the expensive/global commands this task has no business running>.
 
 READ FIRST (and nothing else — do not explore the repo):
   1. <contract note path>  — authoritative on names, units, divisors
@@ -255,7 +448,9 @@ RULES
 - If the spec seems wrong or incomplete, STOP and report rather than improvising.
   Every number you need is written above.
 
-VERIFY: <exact command>. <exact artifact policy afterwards>
+VERIFY: <exact command>. <what a legitimate failure from a CONCURRENT agent's
+work looks like, and the narrower command that isolates your own scope>.
+<exact artifact policy afterwards>
 
 Commit ONLY <paths>, message body describing the change, ending with:
 Co-Authored-By: <coauthor line>
