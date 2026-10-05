@@ -83,7 +83,8 @@ If it qualifies: clean tree on `main` → branch → make the edits **yourself**
 costs more than typing at this size) → run the verification command → commit → push and
 open a short PR, merging it yourself only where the project's CLAUDE.md authorizes that. The PR body
 carries a **Not verified** line if anything went unchecked. Skip Phases
-A2–C entirely; there are no seams to review when one agent wrote everything.
+A2–C entirely; there are no seams to review when one agent wrote everything. Side notes still apply
+(§Side notes): if you noticed anything, file it and report the path at the end.
 
 ---
 
@@ -107,10 +108,44 @@ expensive is a plausible guess that passes review. Everything else in this skill
 
 ---
 
+## Side notes — one file shared by /plan and /build
+
+Keep a running file of things you notice that are **out of scope for this work**: bugs, dead or
+duplicated code, weak implementations, gaps in formulas, UI/UX gaps, doc drift, tooling or
+environment problems. Don't fix them. Write them down and carry on. The user reviews the file
+afterwards and picks the highest-ROI items for later sessions.
+
+- **Path:** `~/.claude/plans/<plan-slug>.notes.md`, next to the plan and its checkpoint. Use the
+  plan's slug, so `/plan`, `/build` and a resumed build all append to the same file. The path is
+  outside every project repo, so the file can't be committed by accident. With no plan (direct mode,
+  or a triage that sent work straight to `/build`), use a short slug for the task.
+- **Read it first if it exists.** The planning session may already have filed entries. Never
+  duplicate one; add to it instead. **Create it on the first note**, headed by one line naming the
+  feature.
+- **Each entry** gets a short title, then:
+  - **What** — the file, function or number.
+  - **Why it matters** — the failure it causes, and whether you saw it happen or found it by reading.
+    Say which (a defect found by reading is latent).
+  - **Fix** — the likely shape and the files it touches.
+  - **ROI** — High / Medium / Low (value ÷ effort). Add "needs a plan" if the fix would trigger one.
+
+  Write each entry so a later session can act on it cold, with no memory of this one.
+- **Not a substitute for the plan's Out of scope.** Out of scope holds things deliberately cut from
+  *this* feature. Notes hold everything else you happened to see.
+- **Subagents never write to the notes file.** Concurrent writers clobber each other. Subagents
+  report observations in their hand-back, and the orchestrator files them.
+- **At the end, sort the entries by ROI** (High → Low). Give the user the path plus the top three
+  in one line each. If nothing was noted, say so in one line.
+
+> This section is duplicated verbatim in `/plan` and `/build`. Keep the two in sync.
+
+---
+
 ## Phase A — Load the plan, budget it, branch
 
 1. **Locate the plan.** If `$ARGUMENTS` names one (slug or path), use it. Otherwise take the most
-   recently modified `*.md` in `~/.claude/plans/`. If you auto-picked, confirm it's the right one —
+   recently modified `*.md` in `~/.claude/plans/`, skipping `*.checkpoint.md` and `*.notes.md`
+   (those are a plan's companions, never a plan). If you auto-picked, confirm it's the right one —
    the wrong plan is the one mistake worth a question.
 
 1b. **Look for a checkpoint before anything else.** If `~/.claude/plans/<plan-slug>.checkpoint.md`
@@ -119,6 +154,9 @@ expensive is a plausible guess that passes review. Everything else in this skill
    its commit on that branch (`git log --oneline`), re-read the frozen contract it carries, and pick
    up at the first task not marked done. A task marked `dispatched` but with no commit died with its
    agent: re-dispatch it from the same brief. Tell the user in one line what you are resuming from.
+
+1c. **Open the side-notes file** (§Side notes): `~/.claude/plans/<plan-slug>.notes.md`. If the
+   planning session left entries, read them so you don't re-file them. Keep appending all build long.
 
 2. **Read it in full.** Then build a **completion checklist of every actionable item**, not just the
    ones in the plan's task or wave table. Items in appendices — "Flags", "Opportunistic cleanups",
@@ -263,8 +301,10 @@ things that matter more than pass/fail:
   agent's confidence or its apology at face value.
 - **Contract drift.** Any agent that changed a shared shape has just invalidated another agent's
   brief. Fix the other side yourself, or re-brief.
+- **Out-of-scope observations.** File anything the agent noticed beyond its task into the side-notes
+  file (§Side notes). Pre-existing oddities it mentions in passing count too.
 
-All three are escalation triggers on Sonnet tier. Adjudicating an off-spec change is precisely the
+The first three are escalation triggers on Sonnet tier. Adjudicating an off-spec change is precisely the
 judgement the plan's tier decision was about.
 
 Halt on failure, on a missing commit, or on a broken base. Never build the next wave on a broken one.
@@ -286,6 +326,7 @@ It holds exactly what a fresh session needs to carry on from this file alone:
 ```markdown
 # Checkpoint — <plan-slug>
 branch: <branch>   base: <sha>   tier: <opus|sonnet>   updated: <ISO timestamp>
+side notes: ~/.claude/plans/<plan-slug>.notes.md
 
 ## Frozen contract
 <the Phase A2 note, inline — not a scratchpad path>
@@ -384,6 +425,12 @@ If the plan asserted something the build disproved — a number, a count, a clai
 **say so in the PR body in plain terms.** The plan is not the customer; the user is, and they may have
 already acted on the wrong claim.
 
+### 5. Hand over the side notes
+
+Sort the side-notes file by ROI and end your final message with its path and the top three entries,
+one line each (§Side notes). The PR's "Follow-up" section covers what this feature leaves unfinished.
+The notes file covers everything else the build ran into.
+
 ---
 
 ## Rules
@@ -411,6 +458,8 @@ already acted on the wrong claim.
 - On Sonnet tier, escalate on the §Running as a Sonnet orchestrator triggers instead of adjudicating.
 - Pushing, opening the PR and merging are the irreversible outward actions. Gate them behind a
   passing review.
+- Out-of-scope things you notice go into `~/.claude/plans/<plan-slug>.notes.md`, the same file
+  `/plan` writes to. Note them; don't fix them. Hand the file over at the end.
 
 ---
 
@@ -457,5 +506,7 @@ Co-Authored-By: <coauthor line>
 
 REPORT BACK: each spec item and how you satisfied it; any value that did not match
 reality (give both numbers); anything you worked around rather than solved; the
-commit hash.
+commit hash. Then, under "NOTICED", anything suboptimal you saw outside your task
+(a bug, dead code, a weak formula, a UI gap), one line each with file and why.
+Do not fix those, and do not write any notes file — the orchestrator files them.
 ```

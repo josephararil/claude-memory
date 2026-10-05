@@ -7,8 +7,8 @@ allowed-tools: [Read, Glob, Grep, Write, AskUserQuestion, Bash]
 
 # plan
 
-Produce an implementation plan. Edit or create no file other than the plan file, and run no
-state-changing commands against the repo. Implementation happens later, in `/build`.
+Produce an implementation plan. Edit or create no file other than the plan file and its side-notes
+file (§Side notes), and run no state-changing commands against the repo. Implementation happens later, in `/build`.
 
 ## Who reads this plan
 
@@ -32,6 +32,43 @@ Three consequences shape everything below:
 
 A plan that reads beautifully but leaves a prop shape, a unit, or a registry owner unstated will
 produce a build that compiles and is wrong.
+
+---
+
+## Side notes — one file shared by /plan and /build
+
+Keep a running file of things you notice that are **out of scope for this work**: bugs, dead or
+duplicated code, weak implementations, gaps in formulas, UI/UX gaps, doc drift, tooling or
+environment problems. Don't fix them. Write them down and carry on. The user reviews the file
+afterwards and picks the highest-ROI items for later sessions.
+
+- **Path:** `~/.claude/plans/<plan-slug>.notes.md`, next to the plan and its checkpoint. Use the
+  plan's slug, so `/plan`, `/build` and a resumed build all append to the same file. The path is
+  outside every project repo, so the file can't be committed by accident. With no plan (direct mode,
+  or a triage that sent work straight to `/build`), use a short slug for the task.
+- **Read it first if it exists.** The planning session may already have filed entries. Never
+  duplicate one; add to it instead. **Create it on the first note**, headed by one line naming the
+  feature.
+- **Each entry** gets a short title, then:
+  - **What** — the file, function or number.
+  - **Why it matters** — the failure it causes, and whether you saw it happen or found it by reading.
+    Say which (a defect found by reading is latent).
+  - **Fix** — the likely shape and the files it touches.
+  - **ROI** — High / Medium / Low (value ÷ effort). Add "needs a plan" if the fix would trigger one.
+
+  Write each entry so a later session can act on it cold, with no memory of this one.
+- **Not a substitute for the plan's Out of scope.** Out of scope holds things deliberately cut from
+  *this* feature. Notes hold everything else you happened to see.
+- **Subagents never write to the notes file.** Concurrent writers clobber each other. Subagents
+  report observations in their hand-back, and the orchestrator files them.
+- **At the end, sort the entries by ROI** (High → Low). Give the user the path plus the top three
+  in one line each. If nothing was noted, say so in one line.
+
+> This section is duplicated verbatim in `/plan` and `/build`. Keep the two in sync.
+
+In `/plan` the notes file is the one other file you may write besides the plan itself. Planning reads
+more of the codebase than any other step, so it is where most notes start. `/build` reads the file
+before it begins and keeps appending, so the user gets one list per feature, not two.
 
 ---
 
@@ -65,6 +102,8 @@ If it qualifies, don't write a plan file. Output only:
 > `/build <one-paragraph brief: exact files, exact change, verbatim strings/values, verify command>`
 > I can also just do it here if you'd rather not switch sessions — say the word and I'll drop the
 > read-only rule for this one change.
+> Side notes: `~/.claude/plans/<task-slug>.notes.md` (only if triage turned something up; pass the
+> same slug to `/build` so it appends there).
 
 Two notes on that. The brief must be self-contained for the same reason subagent briefs are — the
 `/build` session starts empty. And the read-only rule exists so a planning session can't
@@ -90,6 +129,9 @@ contract you haven't read. Specifically, find and note:
 - the real signature and prop shape of any component or function crossing a file boundary;
 - any shared registry (copy/tooltip ids, enums, event names) your change touches;
 - whether generated/build artifacts sit in the paths you're editing.
+
+Anything you notice along the way that this feature won't fix goes into the side-notes file
+(§Side notes), not into the plan.
 
 ### 3. Check your own arithmetic
 
@@ -175,6 +217,7 @@ particular:
 
 End with: "Plan written to `<path>`. **Run /build in a <Sonnet|Opus> session** (<reason in six
 words>). It specifies **N tasks** (**M** parallelisable), roughly **<estimate>** of subagent work."
+Then one line for the side notes: their path and the top three by ROI, or "No side notes."
 
 Naming the session model in the closing line is the whole point of the tier decision — it's the last
 thing the user reads before opening the next session.
@@ -183,8 +226,10 @@ thing the user reads before opening the next session.
 
 ## Rules
 
-- No file edits except the plan file in `~/.claude/plans/`. No state-changing commands against the
-  repo. `Bash` is for read-only inspection and scratchpad arithmetic probes only.
+- No file edits except the plan file and its `.notes.md` in `~/.claude/plans/`. No state-changing
+  commands against the repo.
+- Out-of-scope things you notice go into `~/.claude/plans/<plan-slug>.notes.md`. `/build` appends to
+  the same file. Note them; don't plan them. `Bash` is for read-only inspection and scratchpad arithmetic probes only.
 - Do not begin implementation; that is `/build`'s job.
 - **Triage before planning.** Work that fails no §0 criterion doesn't get a plan file.
 - **Pre-compute everything.** Exact strings verbatim, exact numbers with their inputs, exact
@@ -214,6 +259,7 @@ thing the user reads before opening the next session.
 > **§Tasks is the work contract** — read it before starting. Every value, string and expected number
 > here is pre-computed so subagents implement rather than derive. Tasks marked **[ORCHESTRATOR]** must
 > not be delegated; tasks marked **[OPUS]** additionally require an Opus orchestrator.
+> **Side notes:** `~/.claude/plans/<slug>.notes.md` — read it first, and append to it during the build.
 
 ## Execution  ← read before opening the /build session
 | | |
